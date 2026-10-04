@@ -107,6 +107,20 @@ class _PlayerScreenState extends State<PlayerScreen> {
     _item.isTime ? _start() : _pause();
   }
 
+  /// Ajuste na hora: ±5s por rodada (funcional) ou ±1 repetição (hipertrofia).
+  /// O item é o mesmo do cronograma, então o ajuste vale para os próximos treinos.
+  void _adjust(int step) => setState(() {
+        final item = _item;
+        if (item.isTime) {
+          final old = item.time;
+          item.time = (old + step * 5).clamp(5, 300);
+          // rodada em andamento ganha/perde o mesmo tempo
+          if (_phase == _Phase.work) _left = (_left + item.time - old).clamp(1, item.time);
+        } else {
+          item.reps = (item.reps + step).clamp(1, 100);
+        }
+      });
+
   void _goTo(int i) {
     _pause();
     setState(() {
@@ -171,6 +185,20 @@ class _PlayerScreenState extends State<PlayerScreen> {
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               _Hud(phase: _phase, item: item, set: _set, left: _left, restSec: widget.restSec),
+              if (_phase != _Phase.done) ...[
+                const SizedBox(height: 10),
+                Row(children: [
+                  _AdjustButton(item.isTime ? '−5s' : '−1 rep', () => _adjust(-1)),
+                  Expanded(
+                    child: Text(
+                      _phase == _Phase.rest ? 'Ajustar próxima' : 'Ajustar carga',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: textLow, fontSize: 13),
+                    ),
+                  ),
+                  _AdjustButton(item.isTime ? '+5s' : '+1 rep', () => _adjust(1)),
+                ]),
+              ],
               const SizedBox(height: 24),
               Text(category.name.toUpperCase(), style: caps(textLow)),
               const SizedBox(height: 6),
@@ -289,6 +317,28 @@ class _Hud extends StatelessWidget {
 }
 
 String _mmss(int s) => '${s ~/ 60}:${(s % 60).toString().padLeft(2, '0')}';
+
+class _AdjustButton extends StatelessWidget {
+  const _AdjustButton(this.label, this.onTap);
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+        height: 48,
+        child: OutlinedButton(
+          onPressed: onTap,
+          style: OutlinedButton.styleFrom(
+            backgroundColor: surface2,
+            foregroundColor: textHigh,
+            side: const BorderSide(color: border),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            textStyle: grotesk(15, weight: FontWeight.w600),
+          ),
+          child: Text(label),
+        ),
+      );
+}
 
 class _Tag extends StatelessWidget {
   const _Tag(this.icon, this.text);
