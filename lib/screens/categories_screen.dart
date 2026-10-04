@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../data.dart';
 import '../ui.dart';
 import 'exercises_screen.dart';
+import 'history_screen.dart';
 import 'weekly_plan_screen.dart';
 
 class CategoriesScreen extends StatefulWidget {
@@ -27,9 +28,15 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
             sliver: SliverList.list(children: [
-              const Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                Logo(),
-                CircleAvatar(radius: 22, backgroundColor: lime, child: CircleAvatar(radius: 20, backgroundImage: NetworkImage(imgAvatar))),
+              Row(children: [
+                const Logo(),
+                const Spacer(),
+                SquareIconButton(Icons.history, size: 44, tooltip: 'Histórico', onTap: () async {
+                  await Navigator.push(context, MaterialPageRoute(builder: (_) => const HistoryScreen()));
+                  setState(() {});
+                }),
+                const SizedBox(width: 10),
+                const CircleAvatar(radius: 22, backgroundColor: lime, child: CircleAvatar(radius: 20, backgroundImage: NetworkImage(imgAvatar))),
               ]),
               const SizedBox(height: 28),
               Text('Olá, ${widget.userName}', style: grotesk(30, spacing: -0.6)),
