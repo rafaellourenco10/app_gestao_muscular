@@ -127,6 +127,11 @@ int planMinutes(List<PlanItem> items) => (items.fold(0, (s, i) => s + i.seconds)
 final weeklyPlan = List.generate(7, (_) => <PlanItem>[]);
 final dayType = List.filled(7, WorkoutType.funcional);
 final dayRest = List.filled(7, 60); // descanso entre séries/rodadas, em segundos
+
+/// Texto do lembrete do dia, ou null se for dia de descanso.
+String? reminderBody(int day) => weeklyPlan[day].isEmpty
+    ? null
+    : 'Hoje: ${dayType[day].label} – ${weeklyPlan[day].length} exercício${weeklyPlan[day].length == 1 ? '' : 's'}';
 const restOptions = [30, 60, 90];
 
 class WorkoutLog {

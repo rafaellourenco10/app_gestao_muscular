@@ -6,6 +6,7 @@ import 'exercises_screen.dart' show ExerciseCard;
 import 'pick_exercises_screen.dart';
 import 'player_screen.dart';
 import 'ready_plans_screen.dart';
+import '../reminders.dart';
 
 class WeeklyPlanScreen extends StatefulWidget {
   const WeeklyPlanScreen({super.key});
@@ -36,6 +37,57 @@ class _WeeklyPlanScreenState extends State<WeeklyPlanScreen> {
           i.type = t;
         }
       });
+
+  @override
+  void dispose() {
+    scheduleReminders(); // o texto do aviso depende do cronograma
+    super.dispose();
+  }
+
+  void _toast(String msg) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+
+  Future<void> _reminder() async {
+    if (!remindersSupported) return _toast('Lembretes só funcionam no celular.');
+
+    if (reminderTime != null) {
+      final off = await showDialog<bool>(
+        context: context,
+        builder: (dialog) => AlertDialog(
+          backgroundColor: surface1,
+          title: Text('Lembrete às ${reminderTime!.format(context)}', style: grotesk(20)),
+          content: const Text('Você recebe um aviso nos dias que têm treino no cronograma.'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialog, true), child: const Text('Desativar')),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialog, false),
+              style: FilledButton.styleFrom(backgroundColor: lime, foregroundColor: bg),
+              child: const Text('Mudar horário'),
+            ),
+          ],
+        ),
+      );
+      if (off == null || !mounted) return;
+      if (off) {
+        setState(() => reminderTime = null);
+        await scheduleReminders();
+        return _toast('Lembrete desativado.');
+      }
+    }
+
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: reminderTime ?? const TimeOfDay(hour: 7, minute: 0),
+      helpText: 'Horário do lembrete',
+    );
+    if (picked == null || !mounted) return;
+    if (!await requestReminderPermission()) {
+      if (mounted) _toast('Permita as notificações do FuncFit nas configurações do celular.');
+      return;
+    }
+    setState(() => reminderTime = picked);
+    await scheduleReminders();
+    if (mounted) _toast('Lembrete às ${picked.format(context)} nos dias com treino.');
+  }
 
   Future<void> _readyPlans() async {
     final applied = await Navigator.push<bool>(context, MaterialPageRoute(builder: (_) => const ReadyPlansScreen()));
@@ -100,7 +152,14 @@ class _WeeklyPlanScreenState extends State<WeeklyPlanScreen> {
                   Text('Cronograma semanal', style: grotesk(24, spacing: -0.5)),
                 ]),
               ),
-              SquareIconButton(Icons.auto_awesome_outlined, tooltip: 'Treinos prontos', onTap: _readyPlans),
+              SquareIconButton(Icons.auto_awesome_outlined, size: 44, tooltip: 'Treinos prontos', onTap: _readyPlans),
+              const SizedBox(width: 8),
+              SquareIconButton(
+                reminderTime == null ? Icons.notifications_none : Icons.notifications_active,
+                size: 44,
+                tooltip: 'Lembrete diário',
+                onTap: _reminder,
+              ),
             ]),
           ),
           const SizedBox(height: 20),

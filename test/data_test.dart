@@ -71,4 +71,12 @@ void main() {
     expect(currentStreak(DateTime(2026, 10, 12)), 0); // passou um dia inteiro sem treinar
     history.clear();
   });
+
+  test('texto do lembrete', () {
+    weeklyPlan[0] = [PlanItem(e, type: hip), PlanItem(e, type: hip)];
+    dayType[0] = hip;
+    weeklyPlan[1] = [];
+    expect(reminderBody(0), 'Hoje: Hipertrofia – 2 exercícios');
+    expect(reminderBody(1), isNull); // descanso: sem aviso
+  });
 }
