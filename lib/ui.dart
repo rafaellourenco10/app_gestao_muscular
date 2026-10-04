@@ -68,16 +68,19 @@ class PrimaryButton extends StatelessWidget {
 }
 
 class Logo extends StatelessWidget {
-  const Logo({super.key});
+  const Logo({super.key, this.showMark = true});
+  final bool showMark; // false = só o nome (a tela inicial usa o botão de menu no lugar)
 
   @override
   Widget build(BuildContext context) => Row(mainAxisSize: MainAxisSize.min, children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(color: surface1, borderRadius: BorderRadius.circular(12), border: Border.all(color: border)),
-          child: const Icon(Icons.sort, color: lime, size: 22),
-        ),
-        const SizedBox(width: 10),
+        if (showMark) ...[
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(color: surface1, borderRadius: BorderRadius.circular(12), border: Border.all(color: border)),
+            child: const Icon(Icons.bolt, color: lime, size: 22),
+          ),
+          const SizedBox(width: 10),
+        ],
         Text.rich(TextSpan(style: grotesk(22), children: const [
           TextSpan(text: 'Func'),
           TextSpan(text: 'Fit', style: TextStyle(color: lime)),

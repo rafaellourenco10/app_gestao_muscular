@@ -3,7 +3,10 @@ import 'package:flutter/material.dart';
 import '../data.dart';
 import '../ui.dart';
 import 'exercises_screen.dart';
+import '../reminders.dart';
 import 'history_screen.dart';
+import 'ready_plans_screen.dart';
+import 'welcome_screen.dart';
 import 'weekly_plan_screen.dart';
 
 class CategoriesScreen extends StatefulWidget {
@@ -17,27 +20,46 @@ class CategoriesScreen extends StatefulWidget {
 class _CategoriesScreenState extends State<CategoriesScreen> {
   final _selected = <int>{};
 
+  /// Abre uma tela e, ao voltar, atualiza a home (resumo de hoje, sequência...).
+  Future<void> _open(Widget page) async {
+    await Navigator.push(context, MaterialPageRoute(builder: (_) => page));
+    if (mounted) setState(() {});
+  }
+
+  // usa o context da home: o do menu deixa de existir quando o menu fecha
+  Future<void> _reminder() async {
+    await configureReminder(context);
+    if (mounted) setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     final picked = categories.where((c) => _selected.contains(c.id)).toList();
 
     return Scaffold(
+      drawer: _Menu(userName: widget.userName, open: _open, onReminder: _reminder),
       body: SafeArea(
         bottom: false,
         child: CustomScrollView(slivers: [
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
             sliver: SliverList.list(children: [
-              Row(children: [
-                const Logo(),
-                const Spacer(),
-                SquareIconButton(Icons.history, size: 44, tooltip: 'Histórico', onTap: () async {
-                  await Navigator.push(context, MaterialPageRoute(builder: (_) => const HistoryScreen()));
-                  setState(() {});
-                }),
-                const SizedBox(width: 10),
-                const CircleAvatar(radius: 22, backgroundColor: lime, child: CircleAvatar(radius: 20, backgroundImage: NetworkImage(imgAvatar))),
-              ]),
+              Builder(
+                builder: (context) => Row(children: [
+                  SquareIconButton(Icons.menu, size: 44, tooltip: 'Menu', onTap: () => Scaffold.of(context).openDrawer()),
+                  const SizedBox(width: 12),
+                  const Logo(showMark: false),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: () => Scaffold.of(context).openDrawer(),
+                    child: const CircleAvatar(
+                      radius: 22,
+                      backgroundColor: lime,
+                      child: CircleAvatar(radius: 20, backgroundImage: NetworkImage(imgAvatar)),
+                    ),
+                  ),
+                ]),
+              ),
               const SizedBox(height: 28),
               Row(children: [
                 Expanded(child: Text('Olá, ${widget.userName}', style: grotesk(30, spacing: -0.6))),
@@ -54,10 +76,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
               const SizedBox(height: 4),
               const Text('O que vamos treinar hoje?', style: TextStyle(fontSize: 16)),
               const SizedBox(height: 20),
-              _WeeklyPlanCard(onTap: () async {
-                await Navigator.push(context, MaterialPageRoute(builder: (_) => const WeeklyPlanScreen()));
-                setState(() {}); // atualiza o resumo de hoje
-              }),
+              _WeeklyPlanCard(onTap: () => _open(const WeeklyPlanScreen())),
               const SizedBox(height: 28),
               Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                 Text('Categorias de Foco', style: grotesk(22, weight: FontWeight.w600)),
@@ -108,6 +127,78 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
             ),
           ),
         ]),
+      ),
+    );
+  }
+}
+
+/// Menu lateral: atalhos para as funções do app e sair da conta.
+class _Menu extends StatelessWidget {
+  const _Menu({required this.userName, required this.open, required this.onReminder});
+  final String userName;
+  final Future<void> Function(Widget page) open;
+  final VoidCallback onReminder;
+
+  @override
+  Widget build(BuildContext context) {
+    final streak = currentStreak();
+    void go(Widget page) {
+      Navigator.pop(context); // fecha o menu
+      open(page);
+    }
+
+    Widget item(IconData icon, String label, VoidCallback onTap, {String? trailing}) => ListTile(
+          leading: Icon(icon, color: lime),
+          title: Text(label, style: grotesk(16, weight: FontWeight.w600)),
+          trailing: trailing == null ? null : Text(trailing, style: const TextStyle(color: textLow, fontSize: 13)),
+          onTap: onTap,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        );
+
+    return Drawer(
+      backgroundColor: surface1,
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Padding(
+              padding: const EdgeInsets.all(8),
+              child: Row(children: [
+                const CircleAvatar(radius: 26, backgroundColor: lime, child: CircleAvatar(radius: 24, backgroundImage: NetworkImage(imgAvatar))),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(userName, maxLines: 1, overflow: TextOverflow.ellipsis, style: grotesk(20)),
+                    const SizedBox(height: 2),
+                    Text(
+                      streak == 0 ? 'Bora começar a sequência!' : '🔥 $streak ${streak == 1 ? 'dia seguido' : 'dias seguidos'}',
+                      style: TextStyle(color: streak == 0 ? textLow : lime, fontSize: 13),
+                    ),
+                  ]),
+                ),
+              ]),
+            ),
+            const Divider(color: border, height: 24),
+            item(Icons.calendar_month_outlined, 'Meu cronograma', () => go(const WeeklyPlanScreen())),
+            item(Icons.history, 'Histórico', () => go(const HistoryScreen())),
+            item(Icons.auto_awesome_outlined, 'Treinos prontos', () => go(const ReadyPlansScreen())),
+            item(
+              Icons.notifications_none,
+              'Lembrete diário',
+              () {
+                Navigator.pop(context);
+                onReminder();
+              },
+              trailing: reminderTime?.format(context) ?? 'Desativado',
+            ),
+            const Spacer(),
+            const Divider(color: border, height: 24),
+            item(Icons.logout, 'Sair', () {
+              // TODO(supabase): auth.signOut()
+              Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const WelcomeScreen()), (_) => false);
+            }),
+          ]),
+        ),
       ),
     );
   }

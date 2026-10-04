@@ -44,49 +44,9 @@ class _WeeklyPlanScreenState extends State<WeeklyPlanScreen> {
     super.dispose();
   }
 
-  void _toast(String msg) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
-
   Future<void> _reminder() async {
-    if (!remindersSupported) return _toast('Lembretes só funcionam no celular.');
-
-    if (reminderTime != null) {
-      final off = await showDialog<bool>(
-        context: context,
-        builder: (dialog) => AlertDialog(
-          backgroundColor: surface1,
-          title: Text('Lembrete às ${reminderTime!.format(context)}', style: grotesk(20)),
-          content: const Text('Você recebe um aviso nos dias que têm treino no cronograma.'),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(dialog, true), child: const Text('Desativar')),
-            FilledButton(
-              onPressed: () => Navigator.pop(dialog, false),
-              style: FilledButton.styleFrom(backgroundColor: lime, foregroundColor: bg),
-              child: const Text('Mudar horário'),
-            ),
-          ],
-        ),
-      );
-      if (off == null || !mounted) return;
-      if (off) {
-        setState(() => reminderTime = null);
-        await scheduleReminders();
-        return _toast('Lembrete desativado.');
-      }
-    }
-
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: reminderTime ?? const TimeOfDay(hour: 7, minute: 0),
-      helpText: 'Horário do lembrete',
-    );
-    if (picked == null || !mounted) return;
-    if (!await requestReminderPermission()) {
-      if (mounted) _toast('Permita as notificações do FuncFit nas configurações do celular.');
-      return;
-    }
-    setState(() => reminderTime = picked);
-    await scheduleReminders();
-    if (mounted) _toast('Lembrete às ${picked.format(context)} nos dias com treino.');
+    await configureReminder(context);
+    setState(() {}); // troca o ícone do sino
   }
 
   Future<void> _readyPlans() async {
