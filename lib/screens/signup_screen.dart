@@ -30,9 +30,13 @@ class _SignupScreenState extends State<SignupScreen> {
   void _submit() {
     if (!_form.currentState!.validate()) return;
     // TODO(supabase): auth.signUp + insert em profiles (name, level)
+    profile
+      ..name = _name.text.trim()
+      ..email = _email.text.trim()
+      ..level = _level;
     Navigator.pushAndRemoveUntil(
       context,
-      MaterialPageRoute(builder: (_) => CategoriesScreen(userName: _name.text.trim().split(' ').first)),
+      MaterialPageRoute(builder: (_) => const CategoriesScreen()),
       (_) => false,
     );
   }

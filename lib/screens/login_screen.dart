@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../data.dart';
 import '../ui.dart';
 import 'categories_screen.dart';
 import 'signup_screen.dart';
@@ -26,10 +27,11 @@ class _LoginScreenState extends State<LoginScreen> {
   void _submit() {
     if (!_form.currentState!.validate()) return;
     // TODO(supabase): auth.signInWithPassword e buscar o nome em profiles
-    final name = _email.text.trim().split('@').first;
+    profile.email = _email.text.trim();
+    if (profile.name.isEmpty) profile.name = profile.email.split('@').first; // sem banco, não sabemos o nome
     Navigator.pushAndRemoveUntil(
       context,
-      MaterialPageRoute(builder: (_) => CategoriesScreen(userName: name)),
+      MaterialPageRoute(builder: (_) => const CategoriesScreen()),
       (_) => false,
     );
   }

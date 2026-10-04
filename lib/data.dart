@@ -206,3 +206,60 @@ void applyReadyPlan(ReadyPlan plan) {
     ];
   }
 }
+
+const goals = ['Perder peso', 'Ganhar massa', 'Condicionamento', 'Mobilidade'];
+
+// ponytail: só em memória; vira a tabela profiles (+ weight_logs) no Supabase.
+class Profile {
+  String name = '';
+  String email = '';
+  String level = levels[0];
+  String goal = goals[2];
+  int? heightCm;
+  double? goalKg;
+}
+
+final profile = Profile();
+
+class WeightEntry {
+  const WeightEntry(this.date, this.kg);
+  final DateTime date;
+  final double kg;
+}
+
+/// Registros de peso, do mais antigo para o mais recente.
+final weights = <WeightEntry>[];
+
+void addWeight(double kg, [DateTime? date]) {
+  weights.add(WeightEntry(date ?? DateTime.now(), kg));
+  weights.sort((a, b) => a.date.compareTo(b.date));
+}
+
+double? bmi() {
+  final h = profile.heightCm;
+  if (h == null || weights.isEmpty) return null;
+  return weights.last.kg / ((h / 100) * (h / 100));
+}
+
+String bmiLabel(double v) => switch (v) {
+      < 18.5 => 'Abaixo do peso',
+      < 25 => 'Peso normal',
+      < 30 => 'Sobrepeso',
+      _ => 'Obesidade',
+    };
+
+/// Quanto do caminho entre o peso inicial e a meta já foi percorrido (0 a 1).
+/// Funciona tanto para perder quanto para ganhar peso.
+double? goalProgress() {
+  final goal = profile.goalKg;
+  if (goal == null || weights.isEmpty) return null;
+  final start = weights.first.kg, now = weights.last.kg;
+  if (start == goal) return 1;
+  return ((start - now) / (start - goal)).clamp(0.0, 1.0);
+}
+
+/// "72,5" com vírgula, como no Brasil.
+String kg(double v) => v.toStringAsFixed(v % 1 == 0 ? 0 : 1).replaceAll('.', ',');
+
+/// Aceita "72,5" ou "72.5"; null se não for número.
+double? parseDecimal(String s) => double.tryParse(s.trim().replaceAll(',', '.'));

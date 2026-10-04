@@ -79,4 +79,31 @@ void main() {
     expect(reminderBody(0), 'Hoje: Hipertrofia – 2 exercícios');
     expect(reminderBody(1), isNull); // descanso: sem aviso
   });
+
+  test('progresso de peso, IMC e meta', () {
+    weights.clear();
+    profile
+      ..heightCm = 180
+      ..goalKg = 80;
+    expect(bmi(), isNull);
+    expect(goalProgress(), isNull);
+
+    addWeight(90, DateTime(2026, 1, 1));
+    addWeight(85, DateTime(2026, 3, 1));
+    addWeight(88, DateTime(2026, 2, 1)); // fora de ordem: é ordenado por data
+    expect(weights.first.kg, 90);
+    expect(weights.last.kg, 85);
+    expect(goalProgress(), 0.5); // perdeu 5 de 10 kg
+    expect(bmi()!.toStringAsFixed(1), '26.2'); // 85 / 1,8²
+    expect(bmiLabel(bmi()!), 'Sobrepeso');
+
+    profile.goalKg = 95; // meta de ganhar, mas perdeu: progresso 0
+    expect(goalProgress(), 0);
+
+    expect(kg(72.5), '72,5');
+    expect(kg(80), '80');
+    expect(parseDecimal('72,5'), 72.5);
+    expect(parseDecimal('abc'), isNull);
+    weights.clear();
+  });
 }
