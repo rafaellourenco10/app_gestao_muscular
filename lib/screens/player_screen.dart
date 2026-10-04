@@ -2,10 +2,12 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../data.dart';
 import '../ui.dart';
 import 'exercises_screen.dart' show LevelBadge;
+import 'workout_summary_screen.dart';
 
 enum _Phase { work, rest, done }
 
@@ -26,13 +28,22 @@ class _PlayerScreenState extends State<PlayerScreen> {
   _Phase _phase = _Phase.work;
   late int _left = _item.time; // segundos restantes da rodada (funcional) ou do descanso
   Timer? _timer;
+  final _clock = Stopwatch()..start(); // tempo real do treino, para o resumo
+  int _setsDone = 0;
 
   PlanItem get _item => widget.items[_i];
   bool get _running => _timer != null;
 
   @override
+  void initState() {
+    super.initState();
+    WakelockPlus.enable(); // tela não apaga durante o treino
+  }
+
+  @override
   void dispose() {
     _timer?.cancel();
+    WakelockPlus.disable();
     super.dispose();
   }
 
@@ -60,6 +71,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   /// Fim de uma série/rodada: vai para a próxima série, o próximo exercício ou encerra.
   void _completeSet() {
+    _setsDone++;
     final lastSet = _set >= _item.sets;
     if (lastSet && _i == widget.items.length - 1) {
       _pause();
@@ -106,11 +118,21 @@ class _PlayerScreenState extends State<PlayerScreen> {
   }
 
   void _finish() {
-    history.add(WorkoutLog(DateTime.now(), widget.title, widget.items.length, planMinutes(widget.items)));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Treino concluído! ${widget.items.length} exercícios • ${planMinutes(widget.items)} min')),
+    _clock.stop();
+    final minutes = (_clock.elapsed.inSeconds / 60).ceil().clamp(1, 999);
+    history.add(WorkoutLog(DateTime.now(), widget.title, widget.items.length, minutes));
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => WorkoutSummaryScreen(
+          title: widget.title,
+          duration: _clock.elapsed,
+          exercises: widget.items.length,
+          setsDone: _setsDone,
+          type: widget.items.first.type,
+        ),
+      ),
     );
-    Navigator.pop(context);
   }
 
   @override
