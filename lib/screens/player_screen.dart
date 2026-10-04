@@ -1,14 +1,20 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../data.dart';
 import '../ui.dart';
 import 'exercises_screen.dart' show LevelBadge;
 
+enum _Phase { work, rest, done }
+
 class PlayerScreen extends StatefulWidget {
-  const PlayerScreen({super.key, required this.title, required this.items, required this.index});
+  const PlayerScreen({super.key, required this.title, required this.items, required this.index, this.restSec = 0});
   final String title; // vai para o histórico ao concluir
   final List<PlanItem> items;
   final int index;
+  final int restSec; // descanso entre séries/rodadas; 0 = sem descanso
 
   @override
   State<PlayerScreen> createState() => _PlayerScreenState();
@@ -16,6 +22,86 @@ class PlayerScreen extends StatefulWidget {
 
 class _PlayerScreenState extends State<PlayerScreen> {
   late int _i = widget.index;
+  int _set = 1;
+  _Phase _phase = _Phase.work;
+  late int _left = _item.time; // segundos restantes da rodada (funcional) ou do descanso
+  Timer? _timer;
+
+  PlanItem get _item => widget.items[_i];
+  bool get _running => _timer != null;
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _start() => setState(() => _timer ??= Timer.periodic(const Duration(seconds: 1), (_) => _tick()));
+
+  void _pause() => setState(() {
+        _timer?.cancel();
+        _timer = null;
+      });
+
+  void _tick() {
+    setState(() => _left--);
+    if (_left > 0) return;
+    if (_phase == _Phase.rest) {
+      _alert();
+      _beginWork();
+    } else {
+      _completeSet();
+    }
+  }
+
+  void _alert() => HapticFeedback.heavyImpact();
+
+  /// Fim de uma série/rodada: vai para a próxima série, o próximo exercício ou encerra.
+  void _completeSet() {
+    final lastSet = _set >= _item.sets;
+    if (lastSet && _i == widget.items.length - 1) {
+      _pause();
+      _alert();
+      setState(() => _phase = _Phase.done);
+      return;
+    }
+    setState(() {
+      if (lastSet) {
+        _i++;
+        _set = 1;
+      } else {
+        _set++;
+      }
+    });
+    if (widget.restSec > 0) {
+      setState(() {
+        _phase = _Phase.rest;
+        _left = widget.restSec;
+      });
+      _start();
+    } else {
+      _beginWork();
+    }
+  }
+
+  /// Funcional segue contando sozinho; hipertrofia espera o "Série feita".
+  void _beginWork() {
+    setState(() {
+      _phase = _Phase.work;
+      _left = _item.time;
+    });
+    _item.isTime ? _start() : _pause();
+  }
+
+  void _goTo(int i) {
+    _pause();
+    setState(() {
+      _i = i;
+      _set = 1;
+      _phase = _Phase.work;
+      _left = _item.time;
+    });
+  }
 
   void _finish() {
     history.add(WorkoutLog(DateTime.now(), widget.title, widget.items.length, planMinutes(widget.items)));
@@ -27,10 +113,21 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final item = widget.items[_i];
+    final item = _item;
     final e = item.exercise;
-    final isFirst = _i == 0, isLast = _i == widget.items.length - 1;
     final category = categories.firstWhere((c) => c.id == e.categoryId);
+    final isLast = _i == widget.items.length - 1;
+
+    final (String label, IconData icon, VoidCallback onPressed) = switch (_phase) {
+      _Phase.done => ('Concluir treino', Icons.check, _finish),
+      _Phase.rest => ('Pular descanso', Icons.skip_next, () {
+          _pause();
+          _beginWork();
+        }),
+      _Phase.work when !item.isTime => ('Série feita', Icons.check, _completeSet),
+      _Phase.work when _running => ('Pausar', Icons.pause, _pause),
+      _Phase.work => (_left < item.time ? 'Continuar' : 'Iniciar', Icons.play_arrow, _start),
+    };
 
     return Scaffold(
       body: SafeArea(
@@ -41,33 +138,16 @@ class _PlayerScreenState extends State<PlayerScreen> {
             child: Row(children: [
               SquareIconButton(Icons.arrow_back, onTap: () => Navigator.pop(context)),
               const Spacer(),
-              Text('${_i + 1} / ${widget.items.length}', style: grotesk(16, color: textLow)),
+              Text('Exercício ${_i + 1} / ${widget.items.length}', style: grotesk(16, color: textLow)),
             ]),
           ),
           // TODO(videos): trocar a imagem por VideoPlayer (pacote video_player) com e.videoUrl
-          AspectRatio(
-            aspectRatio: 16 / 9,
-            child: Stack(fit: StackFit.expand, children: [
-              NetImage(e.image),
-              const ColoredBox(color: Color(0x330F0F12)),
-              Center(
-                child: Container(
-                  decoration: BoxDecoration(shape: BoxShape.circle, boxShadow: limeGlow),
-                  child: IconButton.filled(
-                    iconSize: 40,
-                    tooltip: 'Reproduzir',
-                    style: IconButton.styleFrom(backgroundColor: lime, foregroundColor: bg, fixedSize: const Size(80, 80)),
-                    icon: const Icon(Icons.play_arrow_rounded),
-                    onPressed: () => ScaffoldMessenger.of(context)
-                        .showSnackBar(const SnackBar(content: Text('Os vídeos entram na próxima etapa.'))),
-                  ),
-                ),
-              ),
-            ]),
-          ),
+          AspectRatio(aspectRatio: 16 / 9, child: NetImage(e.image)),
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              _Hud(phase: _phase, item: item, set: _set, left: _left, restSec: widget.restSec),
+              const SizedBox(height: 24),
               Text(category.name.toUpperCase(), style: caps(textLow)),
               const SizedBox(height: 6),
               Text(e.title, style: grotesk(26, spacing: -0.5)),
@@ -123,34 +203,92 @@ class _PlayerScreenState extends State<PlayerScreen> {
       bottomNavigationBar: Padding(
         padding: EdgeInsets.fromLTRB(20, 8, 20, 16 + MediaQuery.paddingOf(context).bottom),
         child: Row(children: [
-          SizedBox(
-            width: 56,
-            height: 56,
-            child: IconButton(
-              onPressed: isFirst ? null : () => setState(() => _i--),
-              tooltip: 'Exercício anterior',
-              icon: const Icon(Icons.chevron_left),
-              style: IconButton.styleFrom(
-                backgroundColor: surface2,
-                disabledBackgroundColor: surface1,
-                foregroundColor: textHigh,
-                side: const BorderSide(color: border),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: PrimaryButton(
-              isLast ? 'Concluir treino' : 'Próximo exercício',
-              icon: isLast ? Icons.check : Icons.arrow_forward,
-              onPressed: isLast ? _finish : () => setState(() => _i++),
-            ),
-          ),
+          _NavButton(Icons.skip_previous, 'Exercício anterior', _i == 0 ? null : () => _goTo(_i - 1)),
+          const SizedBox(width: 10),
+          Expanded(child: PrimaryButton(label, icon: icon, onPressed: onPressed)),
+          const SizedBox(width: 10),
+          _NavButton(Icons.skip_next, 'Próximo exercício', isLast ? null : () => _goTo(_i + 1)),
         ]),
       ),
     );
   }
+}
+
+/// Painel do cronômetro: rodada/série atual, tempo e barra de progresso.
+class _Hud extends StatelessWidget {
+  const _Hud({required this.phase, required this.item, required this.set, required this.left, required this.restSec});
+  final _Phase phase;
+  final PlanItem item;
+  final int set, left, restSec;
+
+  @override
+  Widget build(BuildContext context) {
+    final setText = '${item.type.setLabel} $set de ${item.sets}'; // "Série 2 de 3"
+    final (String top, String big, double progress) = switch (phase) {
+      _Phase.done => ('TREINO COMPLETO', 'Mandou bem!', 1),
+      _Phase.rest => ('DESCANSO • A SEGUIR: ${setText.toUpperCase()}', _mmss(left), 1 - left / restSec),
+      _Phase.work when item.isTime => (setText.toUpperCase(), _mmss(left), 1 - left / item.time),
+      _Phase.work => (setText.toUpperCase(), '${item.reps} reps', (set - 1) / item.sets),
+    };
+    final rest = phase == _Phase.rest;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: surface1,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: rest ? border : lime.withValues(alpha: 0.4)),
+        boxShadow: rest ? null : [BoxShadow(color: lime.withValues(alpha: 0.12), blurRadius: 24)],
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(top, style: caps(rest ? textLow : lime)),
+        const SizedBox(height: 8),
+        Text(
+          big,
+          style: grotesk(56, color: rest ? textMed : textHigh, spacing: -1)
+              .copyWith(fontFeatures: const [FontFeature.tabularFigures()], height: 1),
+        ),
+        const SizedBox(height: 16),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(99),
+          child: LinearProgressIndicator(
+            value: progress,
+            minHeight: 6,
+            backgroundColor: surface2,
+            color: rest ? textLow : lime,
+          ),
+        ),
+      ]),
+    );
+  }
+}
+
+String _mmss(int s) => '${s ~/ 60}:${(s % 60).toString().padLeft(2, '0')}';
+
+class _NavButton extends StatelessWidget {
+  const _NavButton(this.icon, this.tooltip, this.onPressed);
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+        width: 56,
+        height: 56,
+        child: IconButton(
+          onPressed: onPressed,
+          tooltip: tooltip,
+          icon: Icon(icon),
+          style: IconButton.styleFrom(
+            backgroundColor: surface2,
+            disabledBackgroundColor: surface1,
+            foregroundColor: textHigh,
+            side: const BorderSide(color: border),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          ),
+        ),
+      );
 }
 
 class _Tag extends StatelessWidget {

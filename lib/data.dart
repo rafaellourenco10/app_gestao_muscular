@@ -86,11 +86,11 @@ const weekdays = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', '
 
 /// Funcional = rodadas x tempo (3 x 50s). Hipertrofia = séries x repetições (3 x 12).
 enum WorkoutType {
-  funcional('Funcional', 'Rodadas', 'Tempo por rodada'),
-  hipertrofia('Hipertrofia', 'Séries', 'Repetições');
+  funcional('Funcional', 'Rodada', 'Rodadas', 'Tempo por rodada'),
+  hipertrofia('Hipertrofia', 'Série', 'Séries', 'Repetições');
 
-  const WorkoutType(this.label, this.setsLabel, this.amountLabel);
-  final String label, setsLabel, amountLabel;
+  const WorkoutType(this.label, this.setLabel, this.setsLabel, this.amountLabel);
+  final String label, setLabel, setsLabel, amountLabel;
 }
 
 /// Exercício com a prescrição do usuário. Guarda tempo e repetições separados,
