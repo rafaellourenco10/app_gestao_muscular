@@ -32,11 +32,11 @@ class _WeeklyPlanScreenState extends State<WeeklyPlanScreen> {
   }
 
   void _setType(WorkoutType t) => setState(() {
-        dayType[_day] = t;
-        for (final i in weeklyPlan[_day]) {
-          i.type = t;
-        }
-      });
+    dayType[_day] = t;
+    for (final i in weeklyPlan[_day]) {
+      i.type = t;
+    }
+  });
 
   @override
   void dispose() {
@@ -47,6 +47,57 @@ class _WeeklyPlanScreenState extends State<WeeklyPlanScreen> {
   Future<void> _reminder() async {
     await configureReminder(context);
     setState(() {}); // troca o ícone do sino
+  }
+
+  PopupMenuItem<VoidCallback> _menuItem(IconData icon, String label, VoidCallback action, {bool enabled = true, bool danger = false}) {
+    final color = !enabled ? textLow : (danger ? Colors.redAccent : textHigh);
+    return PopupMenuItem(
+      value: action,
+      enabled: enabled,
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: color),
+          const SizedBox(width: 12),
+          Text(label, style: TextStyle(color: color)),
+        ],
+      ),
+    );
+  }
+
+  Future<bool> _confirm(String title, String message) async =>
+      await showDialog<bool>(
+        context: context,
+        builder: (dialog) => AlertDialog(
+          backgroundColor: surface1,
+          title: Text(title, style: grotesk(20)),
+          content: Text(message),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialog, false), child: const Text('Cancelar')),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialog, true),
+              style: FilledButton.styleFrom(backgroundColor: Colors.redAccent, foregroundColor: textHigh),
+              child: const Text('Limpar'),
+            ),
+          ],
+        ),
+      ) ==
+      true;
+
+  Future<void> _clearDay() async {
+    final day = weekdays[_day].toLowerCase();
+    if (!await _confirm('Limpar $day?', 'Os ${weeklyPlan[_day].length} exercícios de $day serão removidos.')) return;
+    setState(() => weeklyPlan[_day] = []);
+  }
+
+  Future<void> _clearWeek() async {
+    if (!await _confirm('Limpar a semana inteira?', 'Todos os dias voltam a ser descanso. O histórico de treinos não é apagado.')) return;
+    setState(() {
+      for (var d = 0; d < 7; d++) {
+        weeklyPlan[d] = [];
+        dayType[d] = WorkoutType.funcional;
+        dayRest[d] = 60;
+      }
+    });
   }
 
   Future<void> _readyPlans() async {
@@ -70,27 +121,23 @@ class _WeeklyPlanScreenState extends State<WeeklyPlanScreen> {
       }
     });
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text('Treino copiado para ${[for (final d in targets.toList()..sort()) weekdays[d].toLowerCase()].join(', ')}.'),
-    ));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Treino copiado para ${[for (final d in targets.toList()..sort()) weekdays[d].toLowerCase()].join(', ')}.')),
+    );
   }
 
   Future<void> _editSets(PlanItem item) async {
-    await showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: surface1,
-      showDragHandle: true,
-      builder: (_) => _SetsSheet(item),
-    );
+    await showModalBottomSheet<void>(context: context, backgroundColor: surface1, showDragHandle: true, builder: (_) => _SetsSheet(item));
     setState(() {});
   }
 
   void _play(int index) => Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => PlayerScreen(title: 'Treino de ${weekdays[_day].toLowerCase()}', items: weeklyPlan[_day], index: index, restSec: dayRest[_day]),
-        ),
-      ).then((_) => setState(() {})); // atualiza o selo de concluído
+    context,
+    MaterialPageRoute(
+      builder: (_) =>
+          PlayerScreen(title: 'Treino de ${weekdays[_day].toLowerCase()}', items: weeklyPlan[_day], index: index, restSec: dayRest[_day]),
+    ),
+  ).then((_) => setState(() {})); // atualiza o selo de concluído
 
   @override
   Widget build(BuildContext context) {
@@ -100,168 +147,194 @@ class _WeeklyPlanScreenState extends State<WeeklyPlanScreen> {
     return Scaffold(
       body: SafeArea(
         bottom: false,
-        child: Column(children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-            child: Row(children: [
-              SquareIconButton(Icons.arrow_back, onTap: () => Navigator.pop(context)),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('SEU PLANO', style: caps(lime)),
-                  Text('Cronograma semanal', style: grotesk(24, spacing: -0.5)),
-                ]),
-              ),
-              SquareIconButton(Icons.auto_awesome_outlined, size: 44, tooltip: 'Treinos prontos', onTap: _readyPlans),
-              const SizedBox(width: 8),
-              SquareIconButton(
-                reminderTime == null ? Icons.notifications_none : Icons.notifications_active,
-                size: 44,
-                tooltip: 'Lembrete diário',
-                onTap: _reminder,
-              ),
-            ]),
-          ),
-          const SizedBox(height: 20),
-          SizedBox(
-            height: 76,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              itemCount: 7,
-              separatorBuilder: (_, _) => const SizedBox(width: 8),
-              itemBuilder: (_, i) => _DayPill(
-                label: weekdays[i].substring(0, 3).toUpperCase(),
-                count: weeklyPlan[i].length,
-                selected: i == _day,
-                isToday: i == today,
-                onTap: () => setState(() => _day = i),
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Row(children: [
-              Text(weekdays[_day], style: grotesk(22, weight: FontWeight.w600)),
-              if (_day == today && doneToday) ...[
-                const SizedBox(width: 8),
-                const Icon(Icons.check_circle, color: lime, size: 20),
-              ],
-              const Spacer(),
-              if (list.isNotEmpty)
-                Text('${list.length} exercícios • ~${planMinutes(list)} min', style: const TextStyle(color: textLow)),
-            ]),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-            child: SegmentedButton<WorkoutType>(
-              segments: const [
-                ButtonSegment(value: WorkoutType.funcional, label: Text('Funcional'), icon: Icon(Icons.bolt)),
-                ButtonSegment(value: WorkoutType.hipertrofia, label: Text('Hipertrofia'), icon: Icon(Icons.fitness_center)),
-              ],
-              selected: {dayType[_day]},
-              showSelectedIcon: false,
-              expandedInsets: EdgeInsets.zero, // ocupa a largura toda
-              onSelectionChanged: (v) => _setType(v.first),
-              style: SegmentedButton.styleFrom(
-                backgroundColor: surface1,
-                selectedBackgroundColor: lime,
-                selectedForegroundColor: bg,
-                foregroundColor: textMed,
-                side: const BorderSide(color: border),
-                textStyle: grotesk(15, weight: FontWeight.w600),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
-            child: Row(children: [
-              const Icon(Icons.hourglass_bottom, size: 18, color: textLow),
-              const SizedBox(width: 6),
-              const Expanded(child: Text('Descanso', style: TextStyle(color: textMed))),
-              for (final r in restOptions)
-                Padding(
-                  padding: const EdgeInsets.only(left: 6),
-                  child: ChoiceChip(
-                    label: Text('${r}s'),
-                    selected: dayRest[_day] == r,
-                    showCheckmark: false,
-                    onSelected: (_) => setState(() => dayRest[_day] = r),
-                    labelStyle: grotesk(14, weight: FontWeight.w600, color: dayRest[_day] == r ? bg : textMed),
-                    backgroundColor: surface1,
-                    selectedColor: lime,
-                    side: const BorderSide(color: border),
-                    shape: const StadiumBorder(),
-                    visualDensity: VisualDensity.compact,
-                  ),
-                ),
-            ]),
-          ),
-          if (list.isNotEmpty)
+        child: Column(
+          children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  dayType[_day] == WorkoutType.funcional
-                      ? 'Toque no exercício para ajustar rodadas e tempo'
-                      : 'Toque no exercício para ajustar séries e repetições',
-                  style: const TextStyle(color: textLow, fontSize: 13),
-                ),
-              ),
-            ),
-          const SizedBox(height: 12),
-          Expanded(
-            child: list.isEmpty
-                ? _RestDay(onAdd: _edit, onReady: _readyPlans)
-                : ReorderableListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    itemCount: list.length,
-                    buildDefaultDragHandles: false,
-                    onReorderItem: (from, to) => setState(() => list.insert(to, list.removeAt(from))),
-                    itemBuilder: (_, i) => ExerciseCard(
-                      list[i].exercise,
-                      key: ObjectKey(list[i]),
-                      info: list[i].label,
-                      infoIcon: list[i].isTime ? Icons.timer_outlined : Icons.repeat,
-                      onTap: () => _editSets(list[i]),
-                      trailing: Column(children: [
-                        IconButton(
-                          tooltip: 'Remover',
-                          icon: const Icon(Icons.close, color: textLow),
-                          onPressed: () => setState(() => list.removeAt(i)),
-                        ),
-                        ReorderableDragStartListener(
-                          index: i,
-                          child: const Padding(
-                            padding: EdgeInsets.all(8),
-                            child: Icon(Icons.drag_handle, color: textLow),
-                          ),
-                        ),
-                      ]),
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+              child: Row(
+                children: [
+                  SquareIconButton(Icons.arrow_back, onTap: () => Navigator.pop(context)),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('SEU PLANO', style: caps(lime)),
+                        Text('Cronograma semanal', style: grotesk(24, spacing: -0.5)),
+                      ],
                     ),
                   ),
-          ),
-        ]),
+                  PopupMenuButton<VoidCallback>(
+                    tooltip: 'Mais opções',
+                    icon: const Icon(Icons.more_vert),
+                    color: surface2,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    onSelected: (action) => action(),
+                    itemBuilder: (_) => [
+                      _menuItem(Icons.auto_awesome_outlined, 'Treinos prontos', _readyPlans),
+                      _menuItem(
+                        reminderTime == null ? Icons.notifications_none : Icons.notifications_active,
+                        reminderTime == null ? 'Lembrete diário' : 'Lembrete às ${reminderTime!.format(context)}',
+                        _reminder,
+                      ),
+                      const PopupMenuDivider(),
+                      _menuItem(Icons.clear, 'Limpar ${weekdays[_day].toLowerCase()}', _clearDay, enabled: weeklyPlan[_day].isNotEmpty),
+                      _menuItem(
+                        Icons.delete_sweep_outlined,
+                        'Limpar semana inteira',
+                        _clearWeek,
+                        enabled: weeklyPlan.any((d) => d.isNotEmpty),
+                        danger: true,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              height: 76,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                itemCount: 7,
+                separatorBuilder: (_, _) => const SizedBox(width: 8),
+                itemBuilder: (_, i) => _DayPill(
+                  label: weekdays[i].substring(0, 3).toUpperCase(),
+                  count: weeklyPlan[i].length,
+                  selected: i == _day,
+                  isToday: i == today,
+                  onTap: () => setState(() => _day = i),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                children: [
+                  Text(weekdays[_day], style: grotesk(22, weight: FontWeight.w600)),
+                  if (_day == today && doneToday) ...[const SizedBox(width: 8), const Icon(Icons.check_circle, color: lime, size: 20)],
+                  const Spacer(),
+                  if (list.isNotEmpty)
+                    Text('${list.length} exercícios • ~${planMinutes(list)} min', style: const TextStyle(color: textLow)),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+              child: SegmentedButton<WorkoutType>(
+                segments: const [
+                  ButtonSegment(value: WorkoutType.funcional, label: Text('Funcional'), icon: Icon(Icons.bolt)),
+                  ButtonSegment(value: WorkoutType.hipertrofia, label: Text('Hipertrofia'), icon: Icon(Icons.fitness_center)),
+                ],
+                selected: {dayType[_day]},
+                showSelectedIcon: false,
+                expandedInsets: EdgeInsets.zero, // ocupa a largura toda
+                onSelectionChanged: (v) => _setType(v.first),
+                style: SegmentedButton.styleFrom(
+                  backgroundColor: surface1,
+                  selectedBackgroundColor: lime,
+                  selectedForegroundColor: bg,
+                  foregroundColor: textMed,
+                  side: const BorderSide(color: border),
+                  textStyle: grotesk(15, weight: FontWeight.w600),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+              child: Row(
+                children: [
+                  const Icon(Icons.hourglass_bottom, size: 18, color: textLow),
+                  const SizedBox(width: 6),
+                  const Expanded(
+                    child: Text('Descanso', style: TextStyle(color: textMed)),
+                  ),
+                  for (final r in restOptions)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 6),
+                      child: ChoiceChip(
+                        label: Text('${r}s'),
+                        selected: dayRest[_day] == r,
+                        showCheckmark: false,
+                        onSelected: (_) => setState(() => dayRest[_day] = r),
+                        labelStyle: grotesk(14, weight: FontWeight.w600, color: dayRest[_day] == r ? bg : textMed),
+                        backgroundColor: surface1,
+                        selectedColor: lime,
+                        side: const BorderSide(color: border),
+                        shape: const StadiumBorder(),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            if (list.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    dayType[_day] == WorkoutType.funcional
+                        ? 'Toque no exercício para ajustar rodadas e tempo'
+                        : 'Toque no exercício para ajustar séries e repetições',
+                    style: const TextStyle(color: textLow, fontSize: 13),
+                  ),
+                ),
+              ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: list.isEmpty
+                  ? _RestDay(onAdd: _edit, onReady: _readyPlans)
+                  : ReorderableListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      itemCount: list.length,
+                      buildDefaultDragHandles: false,
+                      onReorderItem: (from, to) => setState(() => list.insert(to, list.removeAt(from))),
+                      itemBuilder: (_, i) => ExerciseCard(
+                        list[i].exercise,
+                        key: ObjectKey(list[i]),
+                        info: list[i].label,
+                        infoIcon: list[i].isTime ? Icons.timer_outlined : Icons.repeat,
+                        onTap: () => _editSets(list[i]),
+                        trailing: Column(
+                          children: [
+                            IconButton(
+                              tooltip: 'Remover',
+                              icon: const Icon(Icons.close, color: textLow),
+                              onPressed: () => setState(() => list.removeAt(i)),
+                            ),
+                            ReorderableDragStartListener(
+                              index: i,
+                              child: const Padding(
+                                padding: EdgeInsets.all(8),
+                                child: Icon(Icons.drag_handle, color: textLow),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+            ),
+          ],
+        ),
       ),
       bottomNavigationBar: list.isEmpty
           ? null
           : Padding(
               padding: EdgeInsets.fromLTRB(20, 8, 20, 16 + MediaQuery.paddingOf(context).bottom),
-              child: Row(children: [
-                SquareIconButton(Icons.edit_outlined, size: 56, tooltip: 'Editar treino', onTap: _edit),
-                const SizedBox(width: 10),
-                SquareIconButton(Icons.copy_all_outlined, size: 56, tooltip: 'Copiar para outros dias', onTap: _copy),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: PrimaryButton(
-                    'Iniciar treino',
-                    icon: Icons.play_circle_outline,
-                    onPressed: () => _play(0),
+              child: Row(
+                children: [
+                  SquareIconButton(Icons.edit_outlined, size: 56, tooltip: 'Editar treino', onTap: _edit),
+                  const SizedBox(width: 10),
+                  SquareIconButton(Icons.copy_all_outlined, size: 56, tooltip: 'Copiar para outros dias', onTap: _copy),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: PrimaryButton('Iniciar treino', icon: Icons.play_circle_outline, onPressed: () => _play(0)),
                   ),
-                ),
-              ]),
+                ],
+              ),
             ),
     );
   }
@@ -276,23 +349,26 @@ class _DayPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => GestureDetector(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          width: 56,
-          decoration: BoxDecoration(
-            color: selected ? lime : surface1,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: isToday && !selected ? lime : border),
-          ),
-          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-            Text(label, style: grotesk(13, color: selected ? bg : textMed, spacing: 0.5)),
-            const SizedBox(height: 6),
-            // quantidade de exercícios do dia; traço = descanso
-            Text(count == 0 ? '–' : '$count', style: grotesk(18, color: selected ? bg : (count == 0 ? textLow : lime))),
-          ]),
-        ),
-      );
+    onTap: onTap,
+    child: AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      width: 56,
+      decoration: BoxDecoration(
+        color: selected ? lime : surface1,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: isToday && !selected ? lime : border),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(label, style: grotesk(13, color: selected ? bg : textMed, spacing: 0.5)),
+          const SizedBox(height: 6),
+          // quantidade de exercícios do dia; traço = descanso
+          Text(count == 0 ? '–' : '$count', style: grotesk(18, color: selected ? bg : (count == 0 ? textLow : lime))),
+        ],
+      ),
+    ),
+  );
 }
 
 class _RestDay extends StatelessWidget {
@@ -301,21 +377,27 @@ class _RestDay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Icon(Icons.self_improvement, size: 56, color: surface3),
-            const SizedBox(height: 12),
-            Text('Dia de descanso', style: grotesk(20, weight: FontWeight.w600)),
-            const SizedBox(height: 6),
-            const Text('Nenhum exercício para este dia ainda.', style: TextStyle(color: textLow)),
-            const SizedBox(height: 24),
-            PrimaryButton('Montar treino', icon: Icons.add, onPressed: onAdd),
-            const SizedBox(height: 8),
-            TextButton(onPressed: onReady, child: Text('Ou use um treino pronto', style: grotesk(15, color: lime))),
-          ]),
-        ),
-      );
+    child: Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.self_improvement, size: 56, color: surface3),
+          const SizedBox(height: 12),
+          Text('Dia de descanso', style: grotesk(20, weight: FontWeight.w600)),
+          const SizedBox(height: 6),
+          const Text('Nenhum exercício para este dia ainda.', style: TextStyle(color: textLow)),
+          const SizedBox(height: 24),
+          PrimaryButton('Montar treino', icon: Icons.add, onPressed: onAdd),
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: onReady,
+            child: Text('Ou use um treino pronto', style: grotesk(15, color: lime)),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 /// Ajuste da prescrição: rodadas x tempo (funcional) ou séries x repetições (hipertrofia).
@@ -334,35 +416,39 @@ class _SetsSheetState extends State<_SetsSheet> {
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Text(item.exercise.title, style: grotesk(22)),
-          const SizedBox(height: 4),
-          Text('${item.type.label.toUpperCase()} • ${item.label}', style: grotesk(15, color: lime, spacing: 0.5)),
-          const SizedBox(height: 16),
-          _Stepper(
-            label: item.type.setsLabel,
-            value: '${item.sets}',
-            onMinus: item.sets > 1 ? () => setState(() => item.sets--) : null,
-            onPlus: item.sets < 10 ? () => setState(() => item.sets++) : null,
-          ),
-          if (item.isTime)
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(item.exercise.title, style: grotesk(22)),
+            const SizedBox(height: 4),
+            Text('${item.type.label.toUpperCase()} • ${item.label}', style: grotesk(15, color: lime, spacing: 0.5)),
+            const SizedBox(height: 16),
             _Stepper(
-              label: item.type.amountLabel,
-              value: '${item.time}s',
-              // tempo anda de 5 em 5 segundos
-              onMinus: item.time > 5 ? () => setState(() => item.time -= 5) : null,
-              onPlus: item.time < 300 ? () => setState(() => item.time += 5) : null,
-            )
-          else
-            _Stepper(
-              label: item.type.amountLabel,
-              value: '${item.reps}',
-              onMinus: item.reps > 1 ? () => setState(() => item.reps--) : null,
-              onPlus: item.reps < 100 ? () => setState(() => item.reps++) : null,
+              label: item.type.setsLabel,
+              value: '${item.sets}',
+              onMinus: item.sets > 1 ? () => setState(() => item.sets--) : null,
+              onPlus: item.sets < 10 ? () => setState(() => item.sets++) : null,
             ),
-          const SizedBox(height: 20),
-          PrimaryButton('Pronto', icon: Icons.check, onPressed: () => Navigator.pop(context)),
-        ]),
+            if (item.isTime)
+              _Stepper(
+                label: item.type.amountLabel,
+                value: '${item.time}s',
+                // tempo anda de 5 em 5 segundos
+                onMinus: item.time > 5 ? () => setState(() => item.time -= 5) : null,
+                onPlus: item.time < 300 ? () => setState(() => item.time += 5) : null,
+              )
+            else
+              _Stepper(
+                label: item.type.amountLabel,
+                value: '${item.reps}',
+                onMinus: item.reps > 1 ? () => setState(() => item.reps--) : null,
+                onPlus: item.reps < 100 ? () => setState(() => item.reps++) : null,
+              ),
+            const SizedBox(height: 20),
+            PrimaryButton('Pronto', icon: Icons.check, onPressed: () => Navigator.pop(context)),
+          ],
+        ),
       ),
     );
   }
@@ -376,26 +462,33 @@ class _Stepper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget btn(IconData icon, VoidCallback? onTap, String tip) => IconButton.filled(
-          onPressed: onTap,
-          tooltip: tip,
-          icon: Icon(icon),
-          style: IconButton.styleFrom(
-            backgroundColor: surface2,
-            foregroundColor: textHigh,
-            disabledBackgroundColor: surface2.withValues(alpha: 0.4),
-            fixedSize: const Size(48, 48),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        );
+      onPressed: onTap,
+      tooltip: tip,
+      icon: Icon(icon),
+      style: IconButton.styleFrom(
+        backgroundColor: surface2,
+        foregroundColor: textHigh,
+        disabledBackgroundColor: surface2.withValues(alpha: 0.4),
+        fixedSize: const Size(48, 48),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(children: [
-        Expanded(child: Text(label, style: grotesk(16, weight: FontWeight.w600))),
-        btn(Icons.remove, onMinus, 'Diminuir'),
-        SizedBox(width: 64, child: Text(value, textAlign: TextAlign.center, style: grotesk(22))),
-        btn(Icons.add, onPlus, 'Aumentar'),
-      ]),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(label, style: grotesk(16, weight: FontWeight.w600)),
+          ),
+          btn(Icons.remove, onMinus, 'Diminuir'),
+          SizedBox(
+            width: 64,
+            child: Text(value, textAlign: TextAlign.center, style: grotesk(22)),
+          ),
+          btn(Icons.add, onPlus, 'Aumentar'),
+        ],
+      ),
     );
   }
 }
@@ -414,35 +507,35 @@ class _CopySheetState extends State<_CopySheet> {
 
   @override
   Widget build(BuildContext context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Text('Copiar treino de ${weekdays[widget.from].toLowerCase()}', style: grotesk(22)),
-            const SizedBox(height: 4),
-            const Text('Os dias marcados terão o treino substituído.', style: TextStyle(color: textLow)),
-            const SizedBox(height: 8),
-            for (var d = 0; d < 7; d++)
-              if (d != widget.from)
-                CheckboxListTile(
-                  value: _picked.contains(d),
-                  onChanged: (_) => setState(() => _picked.contains(d) ? _picked.remove(d) : _picked.add(d)),
-                  title: Text(weekdays[d], style: grotesk(16, weight: FontWeight.w600)),
-                  subtitle: Text(
-                    weeklyPlan[d].isEmpty ? 'Descanso' : '${weeklyPlan[d].length} exercícios (será substituído)',
-                    style: TextStyle(color: weeklyPlan[d].isEmpty ? textLow : Colors.orangeAccent, fontSize: 13),
-                  ),
-                  activeColor: lime,
-                  checkColor: bg,
-                  contentPadding: EdgeInsets.zero,
-                  dense: true,
+    child: Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('Copiar treino de ${weekdays[widget.from].toLowerCase()}', style: grotesk(22)),
+          const SizedBox(height: 4),
+          const Text('Os dias marcados terão o treino substituído.', style: TextStyle(color: textLow)),
+          const SizedBox(height: 8),
+          for (var d = 0; d < 7; d++)
+            if (d != widget.from)
+              CheckboxListTile(
+                value: _picked.contains(d),
+                onChanged: (_) => setState(() => _picked.contains(d) ? _picked.remove(d) : _picked.add(d)),
+                title: Text(weekdays[d], style: grotesk(16, weight: FontWeight.w600)),
+                subtitle: Text(
+                  weeklyPlan[d].isEmpty ? 'Descanso' : '${weeklyPlan[d].length} exercícios (será substituído)',
+                  style: TextStyle(color: weeklyPlan[d].isEmpty ? textLow : Colors.orangeAccent, fontSize: 13),
                 ),
-            const SizedBox(height: 12),
-            PrimaryButton(
-              'Copiar',
-              icon: Icons.copy_all_outlined,
-              onPressed: _picked.isEmpty ? null : () => Navigator.pop(context, _picked),
-            ),
-          ]),
-        ),
-      );
+                activeColor: lime,
+                checkColor: bg,
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+              ),
+          const SizedBox(height: 12),
+          PrimaryButton('Copiar', icon: Icons.copy_all_outlined, onPressed: _picked.isEmpty ? null : () => Navigator.pop(context, _picked)),
+        ],
+      ),
+    ),
+  );
 }
