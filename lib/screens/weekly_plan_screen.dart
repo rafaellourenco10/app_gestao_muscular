@@ -36,6 +36,27 @@ class _WeeklyPlanScreenState extends State<WeeklyPlanScreen> {
         }
       });
 
+  Future<void> _copy() async {
+    final targets = await showModalBottomSheet<Set<int>>(
+      context: context,
+      backgroundColor: surface1,
+      showDragHandle: true,
+      builder: (_) => _CopySheet(from: _day),
+    );
+    if (targets == null || targets.isEmpty) return;
+    setState(() {
+      for (final d in targets) {
+        weeklyPlan[d] = [for (final i in weeklyPlan[_day]) i.copy()];
+        dayType[d] = dayType[_day];
+        dayRest[d] = dayRest[_day];
+      }
+    });
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('Treino copiado para ${[for (final d in targets.toList()..sort()) weekdays[d].toLowerCase()].join(', ')}.'),
+    ));
+  }
+
   Future<void> _editSets(PlanItem item) async {
     await showModalBottomSheet<void>(
       context: context,
@@ -203,22 +224,10 @@ class _WeeklyPlanScreenState extends State<WeeklyPlanScreen> {
           : Padding(
               padding: EdgeInsets.fromLTRB(20, 8, 20, 16 + MediaQuery.paddingOf(context).bottom),
               child: Row(children: [
-                SizedBox(
-                  width: 56,
-                  height: 56,
-                  child: IconButton(
-                    onPressed: _edit,
-                    tooltip: 'Editar treino',
-                    icon: const Icon(Icons.edit_outlined),
-                    style: IconButton.styleFrom(
-                      backgroundColor: surface2,
-                      foregroundColor: textHigh,
-                      side: const BorderSide(color: border),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
+                SquareIconButton(Icons.edit_outlined, size: 56, tooltip: 'Editar treino', onTap: _edit),
+                const SizedBox(width: 10),
+                SquareIconButton(Icons.copy_all_outlined, size: 56, tooltip: 'Copiar para outros dias', onTap: _copy),
+                const SizedBox(width: 10),
                 Expanded(
                   child: PrimaryButton(
                     'Iniciar treino',
@@ -361,4 +370,51 @@ class _Stepper extends StatelessWidget {
       ]),
     );
   }
+}
+
+/// Escolha dos dias que recebem uma cópia do treino do dia [from].
+class _CopySheet extends StatefulWidget {
+  const _CopySheet({required this.from});
+  final int from;
+
+  @override
+  State<_CopySheet> createState() => _CopySheetState();
+}
+
+class _CopySheetState extends State<_CopySheet> {
+  final _picked = <int>{};
+
+  @override
+  Widget build(BuildContext context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Text('Copiar treino de ${weekdays[widget.from].toLowerCase()}', style: grotesk(22)),
+            const SizedBox(height: 4),
+            const Text('Os dias marcados terão o treino substituído.', style: TextStyle(color: textLow)),
+            const SizedBox(height: 8),
+            for (var d = 0; d < 7; d++)
+              if (d != widget.from)
+                CheckboxListTile(
+                  value: _picked.contains(d),
+                  onChanged: (_) => setState(() => _picked.contains(d) ? _picked.remove(d) : _picked.add(d)),
+                  title: Text(weekdays[d], style: grotesk(16, weight: FontWeight.w600)),
+                  subtitle: Text(
+                    weeklyPlan[d].isEmpty ? 'Descanso' : '${weeklyPlan[d].length} exercícios (será substituído)',
+                    style: TextStyle(color: weeklyPlan[d].isEmpty ? textLow : Colors.orangeAccent, fontSize: 13),
+                  ),
+                  activeColor: lime,
+                  checkColor: bg,
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                ),
+            const SizedBox(height: 12),
+            PrimaryButton(
+              'Copiar',
+              icon: Icons.copy_all_outlined,
+              onPressed: _picked.isEmpty ? null : () => Navigator.pop(context, _picked),
+            ),
+          ]),
+        ),
+      );
 }

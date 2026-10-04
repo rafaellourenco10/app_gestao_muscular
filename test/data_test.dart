@@ -25,4 +25,11 @@ void main() {
     expect(PlanItem(e, type: hip, reps: 10).seconds, 90); // 3 x 10 reps x 3s
     expect(planMinutes([PlanItem(e), PlanItem(e)]), 5); // 270s -> 4,5 -> 5
   });
+
+  test('cópia do dia é independente do original', () {
+    final original = PlanItem(e, sets: 4);
+    final copy = original.copy()..sets = 2;
+    expect(original.sets, 4);
+    expect(copy.label, '2 x 45s');
+  });
 }

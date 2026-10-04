@@ -112,6 +112,8 @@ class PlanItem {
           ? '$sets x ${time}s'
           : '$sets x $reps';
 
+  PlanItem copy() => PlanItem(exercise, type: type, sets: sets, time: time, reps: reps);
+
   // ponytail: estimativa de 3s por repetição, sem contar descanso
   int get seconds => sets * (isTime ? time : reps * 3);
 }

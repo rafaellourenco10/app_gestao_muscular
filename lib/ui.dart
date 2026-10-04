@@ -104,18 +104,24 @@ class DotPill extends StatelessWidget {
 }
 
 class SquareIconButton extends StatelessWidget {
-  const SquareIconButton(this.icon, {super.key, required this.onTap});
+  const SquareIconButton(this.icon, {super.key, required this.onTap, this.tooltip, this.size = 52});
   final IconData icon;
-  final VoidCallback onTap;
+  final VoidCallback? onTap; // null = desativado
+  final String? tooltip;
+  final double size;
 
   @override
-  Widget build(BuildContext context) => Material(
-        color: surface2,
-        borderRadius: BorderRadius.circular(16),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: onTap,
-          child: SizedBox(width: 52, height: 52, child: Icon(icon, color: textHigh)),
+  Widget build(BuildContext context) => IconButton(
+        onPressed: onTap,
+        tooltip: tooltip,
+        icon: Icon(icon),
+        style: IconButton.styleFrom(
+          fixedSize: Size.square(size),
+          backgroundColor: surface2,
+          disabledBackgroundColor: surface1,
+          foregroundColor: textHigh,
+          side: const BorderSide(color: border),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         ),
       );
 }

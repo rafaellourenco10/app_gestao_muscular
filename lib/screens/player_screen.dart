@@ -205,11 +205,11 @@ class _PlayerScreenState extends State<PlayerScreen> {
       bottomNavigationBar: Padding(
         padding: EdgeInsets.fromLTRB(20, 8, 20, 16 + MediaQuery.paddingOf(context).bottom),
         child: Row(children: [
-          _NavButton(Icons.skip_previous, 'Exercício anterior', _i == 0 ? null : () => _goTo(_i - 1)),
+          SquareIconButton(Icons.skip_previous, size: 56, tooltip: 'Exercício anterior', onTap: _i == 0 ? null : () => _goTo(_i - 1)),
           const SizedBox(width: 10),
           Expanded(child: PrimaryButton(label, icon: icon, onPressed: onPressed)),
           const SizedBox(width: 10),
-          _NavButton(Icons.skip_next, 'Próximo exercício', isLast ? null : () => _goTo(_i + 1)),
+          SquareIconButton(Icons.skip_next, size: 56, tooltip: 'Próximo exercício', onTap: isLast ? null : () => _goTo(_i + 1)),
         ]),
       ),
     );
@@ -267,31 +267,6 @@ class _Hud extends StatelessWidget {
 }
 
 String _mmss(int s) => '${s ~/ 60}:${(s % 60).toString().padLeft(2, '0')}';
-
-class _NavButton extends StatelessWidget {
-  const _NavButton(this.icon, this.tooltip, this.onPressed);
-  final IconData icon;
-  final String tooltip;
-  final VoidCallback? onPressed;
-
-  @override
-  Widget build(BuildContext context) => SizedBox(
-        width: 56,
-        height: 56,
-        child: IconButton(
-          onPressed: onPressed,
-          tooltip: tooltip,
-          icon: Icon(icon),
-          style: IconButton.styleFrom(
-            backgroundColor: surface2,
-            disabledBackgroundColor: surface1,
-            foregroundColor: textHigh,
-            side: const BorderSide(color: border),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          ),
-        ),
-      );
-}
 
 class _Tag extends StatelessWidget {
   const _Tag(this.icon, this.text);
