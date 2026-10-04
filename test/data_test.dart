@@ -49,4 +49,26 @@ void main() {
       expect(restDays.every((d) => weeklyPlan[d].isEmpty), isTrue);
     }
   });
+
+  test('sequência de dias', () {
+    final hoje = DateTime(2026, 10, 10, 18);
+    DateTime dia(int d) => DateTime(2026, 10, d, 9);
+    WorkoutLog log(DateTime d) => WorkoutLog(d, 'x', 1, 1);
+
+    history.clear();
+    expect(currentStreak(hoje), 0);
+
+    history.addAll([log(dia(7)), log(dia(8)), log(dia(9))]); // até ontem
+    expect(currentStreak(hoje), 3); // hoje ainda não treinou: não zera
+
+    history.add(log(dia(10)));
+    history.add(log(dia(10))); // dois treinos no mesmo dia contam como um
+    expect(currentStreak(hoje), 4);
+
+    history.removeWhere((l) => l.date.day == 9); // buraco ontem
+    expect(currentStreak(hoje), 1);
+
+    expect(currentStreak(DateTime(2026, 10, 12)), 0); // passou um dia inteiro sem treinar
+    history.clear();
+  });
 }

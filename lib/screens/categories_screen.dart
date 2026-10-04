@@ -39,7 +39,18 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                 const CircleAvatar(radius: 22, backgroundColor: lime, child: CircleAvatar(radius: 20, backgroundImage: NetworkImage(imgAvatar))),
               ]),
               const SizedBox(height: 28),
-              Text('Olá, ${widget.userName}', style: grotesk(30, spacing: -0.6)),
+              Row(children: [
+                Expanded(child: Text('Olá, ${widget.userName}', style: grotesk(30, spacing: -0.6))),
+                if (currentStreak() > 0)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(color: surface1, borderRadius: BorderRadius.circular(99), border: Border.all(color: border)),
+                    child: Text(
+                      '🔥 ${currentStreak()} ${currentStreak() == 1 ? 'DIA' : 'DIAS'}',
+                      style: grotesk(14, color: lime, spacing: 0.5),
+                    ),
+                  ),
+              ]),
               const SizedBox(height: 4),
               const Text('O que vamos treinar hoje?', style: TextStyle(fontSize: 16)),
               const SizedBox(height: 20),

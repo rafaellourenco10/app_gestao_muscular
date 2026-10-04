@@ -143,6 +143,21 @@ bool isSameDay(DateTime a, DateTime b) => a.year == b.year && a.month == b.month
 
 bool get doneToday => history.any((l) => isSameDay(l.date, DateTime.now()));
 
+/// Dias seguidos com treino concluído. Se hoje ainda não treinou, a sequência
+/// conta até ontem (só zera quando passa um dia inteiro sem treino).
+int currentStreak([DateTime? now]) {
+  now ??= DateTime.now();
+  final days = {for (final l in history) DateTime(l.date.year, l.date.month, l.date.day)};
+  var d = DateTime(now.year, now.month, now.day);
+  if (!days.contains(d)) d = DateTime(d.year, d.month, d.day - 1);
+  var n = 0;
+  while (days.contains(d)) {
+    n++;
+    d = DateTime(d.year, d.month, d.day - 1);
+  }
+  return n;
+}
+
 /// Minúsculas e sem acento, para a busca achar "flexao" em "Flexão".
 String fold(String s) {
   const from = 'áàâãäéèêëíìîïóòôõöúùûüç', to = 'aaaaaeeeeiiiiooooouuuuc';
