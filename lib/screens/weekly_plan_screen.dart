@@ -5,6 +5,7 @@ import '../ui.dart';
 import 'exercises_screen.dart' show ExerciseCard;
 import 'pick_exercises_screen.dart';
 import 'player_screen.dart';
+import 'ready_plans_screen.dart';
 
 class WeeklyPlanScreen extends StatefulWidget {
   const WeeklyPlanScreen({super.key});
@@ -35,6 +36,11 @@ class _WeeklyPlanScreenState extends State<WeeklyPlanScreen> {
           i.type = t;
         }
       });
+
+  Future<void> _readyPlans() async {
+    final applied = await Navigator.push<bool>(context, MaterialPageRoute(builder: (_) => const ReadyPlansScreen()));
+    if (applied == true) setState(() {});
+  }
 
   Future<void> _copy() async {
     final targets = await showModalBottomSheet<Set<int>>(
@@ -94,6 +100,7 @@ class _WeeklyPlanScreenState extends State<WeeklyPlanScreen> {
                   Text('Cronograma semanal', style: grotesk(24, spacing: -0.5)),
                 ]),
               ),
+              SquareIconButton(Icons.auto_awesome_outlined, tooltip: 'Treinos prontos', onTap: _readyPlans),
             ]),
           ),
           const SizedBox(height: 20),
@@ -188,7 +195,7 @@ class _WeeklyPlanScreenState extends State<WeeklyPlanScreen> {
           const SizedBox(height: 12),
           Expanded(
             child: list.isEmpty
-                ? _RestDay(onAdd: _edit)
+                ? _RestDay(onAdd: _edit, onReady: _readyPlans)
                 : ReorderableListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     itemCount: list.length,
@@ -270,8 +277,8 @@ class _DayPill extends StatelessWidget {
 }
 
 class _RestDay extends StatelessWidget {
-  const _RestDay({required this.onAdd});
-  final VoidCallback onAdd;
+  const _RestDay({required this.onAdd, required this.onReady});
+  final VoidCallback onAdd, onReady;
 
   @override
   Widget build(BuildContext context) => Center(
@@ -285,6 +292,8 @@ class _RestDay extends StatelessWidget {
             const Text('Nenhum exercício para este dia ainda.', style: TextStyle(color: textLow)),
             const SizedBox(height: 24),
             PrimaryButton('Montar treino', icon: Icons.add, onPressed: onAdd),
+            const SizedBox(height: 8),
+            TextButton(onPressed: onReady, child: Text('Ou use um treino pronto', style: grotesk(15, color: lime))),
           ]),
         ),
       );

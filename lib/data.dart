@@ -152,3 +152,37 @@ String fold(String s) {
     return i < 0 ? r : to.codeUnitAt(i);
   }));
 }
+
+/// Cronograma pronto para quem não sabe montar o próprio treino.
+class ReadyPlan {
+  const ReadyPlan(this.name, this.description, this.days);
+  final String name, description;
+  final Map<int, (WorkoutType, List<String>)> days; // dia (0 = segunda) -> tipo + títulos dos exercícios
+}
+
+const readyPlans = [
+  ReadyPlan('Iniciante 3x por semana', 'Funcional de corpo inteiro, leve e sem equipamento pesado.', {
+    0: (WorkoutType.funcional, ['Polichinelo', 'Isometria na parede', 'Prancha frontal', 'Flexão de braço']),
+    2: (WorkoutType.funcional, ['Polichinelo', 'Kettlebell Swing', 'Prancha frontal', 'Rotação torácica']),
+    4: (WorkoutType.funcional, ['Polichinelo', 'Isometria na parede', 'Flexão de braço', 'Alongamento de quadril']),
+  }),
+  ReadyPlan('Força para começar', 'Hipertrofia 2x por semana com exercícios básicos.', {
+    1: (WorkoutType.hipertrofia, ['Agachamento com salto', 'Afundo búlgaro com halteres', 'Prancha frontal']),
+    3: (WorkoutType.hipertrofia, ['Flexão de braço', 'Push press com kettlebell', 'Kettlebell Swing']),
+  }),
+  ReadyPlan('Mobilidade e core', 'Sessões curtas para soltar o corpo e fortalecer o abdômen.', {
+    0: (WorkoutType.funcional, ['Rotação torácica', 'Alongamento de quadril', 'Prancha frontal']),
+    3: (WorkoutType.funcional, ['Rotação torácica', 'Mountain climber', 'Alongamento de quadril']),
+  }),
+];
+
+/// Substitui a semana inteira pelo plano pronto.
+void applyReadyPlan(ReadyPlan plan) {
+  for (var d = 0; d < 7; d++) {
+    final day = plan.days[d];
+    dayType[d] = day?.$1 ?? WorkoutType.funcional;
+    weeklyPlan[d] = [
+      for (final title in day?.$2 ?? const <String>[]) PlanItem(exercises.firstWhere((e) => e.title == title), type: dayType[d]),
+    ];
+  }
+}

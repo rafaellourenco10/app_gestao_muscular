@@ -37,4 +37,16 @@ void main() {
     expect(fold('Flexão de Braço'), 'flexao de braco');
     expect(fold('Rotação torácica').contains(fold('TORACICA')), isTrue);
   });
+
+  test('treinos prontos usam exercícios que existem', () {
+    for (final p in readyPlans) {
+      applyReadyPlan(p); // firstWhere lança erro se algum título estiver errado
+      for (final MapEntry(key: d, value: (type, titles)) in p.days.entries) {
+        expect(weeklyPlan[d].map((i) => i.exercise.title), titles);
+        expect(dayType[d], type);
+      }
+      final restDays = [for (var d = 0; d < 7; d++) if (!p.days.containsKey(d)) d];
+      expect(restDays.every((d) => weeklyPlan[d].isEmpty), isTrue);
+    }
+  });
 }
