@@ -15,6 +15,7 @@ const _wallSit = '${_img}AB6AXuCUlopTe_Ne-r5v2f0MejC2Ji3Hv8Q19FPQxBdd09kCIasSkc8
 const _forwardLunge = '${_img}AB6AXuAWGvCosd7ODmX6r7F0kucbroWZpP4hYYpfuDnF0rauZbIhIhUVfq-w9avUQI-Uzo-Jtdta3Ix0YJQL6VTgBXY2Td_eMJKYgwurd0WfclAZW3j4EBrnvxuDkBDXgEDaX9_o4MCieE8ewUghsZlXV0xWFbJHCaL0QiQit3jrcFl9t0Me9-Mlbgy4gerbb21CsndOjIYo7H32Fy_uaQ71Q7DDaoPuoME7OUDn_q20uT4HsoLlq6_0DGka2g';
 
 const levels = ['Iniciante', 'Intermediário', 'Avançado'];
+const equipments = ['Peso corporal', 'Kettlebell', 'Halteres', 'Barra fixa'];
 
 class Category {
   const Category(this.id, this.tag, this.name, this.image);
@@ -30,6 +31,7 @@ class Exercise {
     required this.level,
     required this.durationSec,
     required this.image,
+    this.equipment = 'Peso corporal',
     this.description = 'Mantenha o core ativado e execute o movimento com controle, priorizando a amplitude e a postura antes da velocidade.',
     this.tips = const [
       ('Postura da coluna', 'Mantenha o peito aberto e o core ativado durante todo o movimento.'),
@@ -38,7 +40,7 @@ class Exercise {
     ],
   });
   final int categoryId;
-  final String title, subtitle, level, image, description;
+  final String title, subtitle, level, image, equipment, description;
   final int durationSec;
   final List<(String, String)> tips;
 }
@@ -62,15 +64,15 @@ const exercises = [
       ('Impulsão com os braços', 'Use o balanço coordenado dos braços para ganhar altura e estabilidade.'),
     ],
   ),
-  Exercise(categoryId: 2, title: 'Afundo búlgaro com halteres', subtitle: 'Ativação profunda de glúteos', level: 'Avançado', durationSec: 50, image: _lunge),
-  Exercise(categoryId: 2, title: 'Kettlebell Swing unilateral', subtitle: 'Cadeia posterior, extensão de quadril', level: 'Intermediário', durationSec: 40, image: _kettlebellMan),
+  Exercise(categoryId: 2, title: 'Afundo búlgaro com halteres', subtitle: 'Ativação profunda de glúteos', level: 'Avançado', durationSec: 50, image: _lunge, equipment: 'Halteres'),
+  Exercise(categoryId: 2, title: 'Kettlebell Swing unilateral', subtitle: 'Cadeia posterior, extensão de quadril', level: 'Intermediário', durationSec: 40, image: _kettlebellMan, equipment: 'Kettlebell'),
   Exercise(categoryId: 2, title: 'Isometria na parede', subtitle: 'Resistência estática de quadríceps', level: 'Iniciante', durationSec: 60, image: _wallSit),
   Exercise(categoryId: 2, title: 'Passada com elevação de joelho', subtitle: 'Equilíbrio dinâmico, flexores do quadril', level: 'Intermediário', durationSec: 45, image: _forwardLunge),
   Exercise(categoryId: 1, title: 'Burpee', subtitle: 'Condicionamento total', level: 'Intermediário', durationSec: 40, image: _jump),
-  Exercise(categoryId: 1, title: 'Kettlebell Swing', subtitle: 'Potência de quadril', level: 'Iniciante', durationSec: 45, image: _kettlebellMan),
-  Exercise(categoryId: 3, title: 'Elevação de pernas na barra', subtitle: 'Abdômen inferior', level: 'Avançado', durationSec: 40, image: _core),
+  Exercise(categoryId: 1, title: 'Kettlebell Swing', subtitle: 'Potência de quadril', level: 'Iniciante', durationSec: 45, image: _kettlebellMan, equipment: 'Kettlebell'),
+  Exercise(categoryId: 3, title: 'Elevação de pernas na barra', subtitle: 'Abdômen inferior', level: 'Avançado', durationSec: 40, image: _core, equipment: 'Barra fixa'),
   Exercise(categoryId: 3, title: 'Prancha frontal', subtitle: 'Estabilidade do core', level: 'Iniciante', durationSec: 60, image: _wallSit),
-  Exercise(categoryId: 4, title: 'Push press com kettlebell', subtitle: 'Ombros e tríceps', level: 'Intermediário', durationSec: 45, image: _press),
+  Exercise(categoryId: 4, title: 'Push press com kettlebell', subtitle: 'Ombros e tríceps', level: 'Intermediário', durationSec: 45, image: _press, equipment: 'Kettlebell'),
   Exercise(categoryId: 4, title: 'Flexão de braço', subtitle: 'Peitoral e tríceps', level: 'Iniciante', durationSec: 40, image: _forwardLunge),
   Exercise(categoryId: 5, title: 'Polichinelo', subtitle: 'Aquecimento cardiovascular', level: 'Iniciante', durationSec: 60, image: _jump),
   Exercise(categoryId: 5, title: 'Mountain climber', subtitle: 'Cardio e core', level: 'Intermediário', durationSec: 40, image: _core),
@@ -140,3 +142,13 @@ final history = <WorkoutLog>[];
 bool isSameDay(DateTime a, DateTime b) => a.year == b.year && a.month == b.month && a.day == b.day;
 
 bool get doneToday => history.any((l) => isSameDay(l.date, DateTime.now()));
+
+/// Minúsculas e sem acento, para a busca achar "flexao" em "Flexão".
+String fold(String s) {
+  const from = 'áàâãäéèêëíìîïóòôõöúùûüç', to = 'aaaaaeeeeiiiiooooouuuuc';
+  final lower = s.toLowerCase();
+  return String.fromCharCodes(lower.runes.map((r) {
+    final i = from.indexOf(String.fromCharCode(r));
+    return i < 0 ? r : to.codeUnitAt(i);
+  }));
+}

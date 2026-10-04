@@ -32,4 +32,9 @@ void main() {
     expect(original.sets, 4);
     expect(copy.label, '2 x 45s');
   });
+
+  test('busca ignora acentos e maiúsculas', () {
+    expect(fold('Flexão de Braço'), 'flexao de braco');
+    expect(fold('Rotação torácica').contains(fold('TORACICA')), isTrue);
+  });
 }
