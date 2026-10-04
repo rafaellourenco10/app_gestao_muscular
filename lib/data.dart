@@ -122,6 +122,8 @@ int planMinutes(List<PlanItem> items) => (items.fold(0, (s, i) => s + i.seconds)
 // ponytail: só em memória (some ao fechar o app); vira as tabelas plan_days / plan_items no Supabase.
 final weeklyPlan = List.generate(7, (_) => <PlanItem>[]);
 final dayType = List.filled(7, WorkoutType.funcional);
+final dayRest = List.filled(7, 60); // descanso entre séries/rodadas, em segundos
+const restOptions = [30, 60, 90];
 
 class WorkoutLog {
   const WorkoutLog(this.date, this.title, this.exercises, this.minutes);

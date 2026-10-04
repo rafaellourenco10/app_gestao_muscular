@@ -45,6 +45,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   void _tick() {
     setState(() => _left--);
+    if (_phase == _Phase.rest && _left > 0 && _left <= 3) HapticFeedback.selectionClick(); // 3, 2, 1
     if (_left > 0) return;
     if (_phase == _Phase.rest) {
       _alert();
@@ -54,7 +55,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
     }
   }
 
-  void _alert() => HapticFeedback.heavyImpact();
+  // ponytail: vibração curta do sistema; pacote `vibration` se precisar de padrão mais longo
+  void _alert() => HapticFeedback.vibrate();
 
   /// Fim de uma série/rodada: vai para a próxima série, o próximo exercício ou encerra.
   void _completeSet() {

@@ -49,7 +49,7 @@ class _WeeklyPlanScreenState extends State<WeeklyPlanScreen> {
   void _play(int index) => Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => PlayerScreen(title: 'Treino de ${weekdays[_day].toLowerCase()}', items: weeklyPlan[_day], index: index),
+          builder: (_) => PlayerScreen(title: 'Treino de ${weekdays[_day].toLowerCase()}', items: weeklyPlan[_day], index: index, restSec: dayRest[_day]),
         ),
       ).then((_) => setState(() {})); // atualiza o selo de concluído
 
@@ -126,6 +126,30 @@ class _WeeklyPlanScreenState extends State<WeeklyPlanScreen> {
                 textStyle: grotesk(15, weight: FontWeight.w600),
               ),
             ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+            child: Row(children: [
+              const Icon(Icons.hourglass_bottom, size: 18, color: textLow),
+              const SizedBox(width: 6),
+              const Expanded(child: Text('Descanso', style: TextStyle(color: textMed))),
+              for (final r in restOptions)
+                Padding(
+                  padding: const EdgeInsets.only(left: 6),
+                  child: ChoiceChip(
+                    label: Text('${r}s'),
+                    selected: dayRest[_day] == r,
+                    showCheckmark: false,
+                    onSelected: (_) => setState(() => dayRest[_day] = r),
+                    labelStyle: grotesk(14, weight: FontWeight.w600, color: dayRest[_day] == r ? bg : textMed),
+                    backgroundColor: surface1,
+                    selectedColor: lime,
+                    side: const BorderSide(color: border),
+                    shape: const StadiumBorder(),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ),
+            ]),
           ),
           if (list.isNotEmpty)
             Padding(
