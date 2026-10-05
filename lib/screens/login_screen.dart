@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data.dart';
+import '../storage.dart';
 import '../ui.dart';
 import 'categories_screen.dart';
 import 'signup_screen.dart';
@@ -27,6 +28,7 @@ class _LoginScreenState extends State<LoginScreen> {
   void _submit() {
     if (!_form.currentState!.validate()) return;
     // TODO(supabase): auth.signInWithPassword e buscar o nome em profiles
+    loggedIn = true;
     profile.email = _email.text.trim();
     if (profile.name.isEmpty) profile.name = profile.email.split('@').first; // sem banco, não sabemos o nome
     Navigator.pushAndRemoveUntil(

@@ -41,6 +41,7 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   wakelock_plus: ^1.8.0
+  shared_preferences: ^2.5.5
 
 dev_dependencies:
   flutter_test:

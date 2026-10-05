@@ -4,6 +4,7 @@ import '../data.dart';
 import '../ui.dart';
 import 'exercises_screen.dart';
 import '../reminders.dart';
+import '../storage.dart';
 import 'history_screen.dart';
 import 'profile_screen.dart';
 import 'ready_plans_screen.dart';
@@ -226,6 +227,7 @@ class _Menu extends StatelessWidget {
               const Divider(color: border, height: 24),
               item(Icons.logout, 'Sair', () {
                 // TODO(supabase): auth.signOut()
+                loggedIn = false; // os dados ficam no aparelho para o próximo login
                 Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const WelcomeScreen()), (_) => false);
               }),
             ],

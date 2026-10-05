@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data.dart';
+import '../storage.dart';
 import '../ui.dart';
 import 'categories_screen.dart';
 import 'legal_screen.dart';
@@ -31,6 +32,8 @@ class _SignupScreenState extends State<SignupScreen> {
   void _submit() {
     if (!_form.currentState!.validate()) return;
     // TODO(supabase): auth.signUp + insert em profiles (name, level)
+    deleteAllUserData(); // conta nova no aparelho começa do zero
+    loggedIn = true;
     profile
       ..name = _name.text.trim()
       ..email = _email.text.trim()

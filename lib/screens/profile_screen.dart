@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../data.dart';
 import '../reminders.dart';
+import '../storage.dart';
 import '../ui.dart';
 import 'legal_screen.dart';
 import 'welcome_screen.dart';
@@ -30,6 +31,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final value = await showDialog<double>(context: context, builder: (_) => const _WeightDialog());
     if (value == null) return;
     setState(() => addWeight(value));
+    saveData();
   }
 
   @override
@@ -159,7 +161,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Dismissible(
                 key: ObjectKey(w),
                 direction: DismissDirection.endToStart,
-                onDismissed: (_) => setState(() => weights.remove(w)),
+                onDismissed: (_) {
+                  setState(() => weights.remove(w));
+                  saveData();
+                },
                 background: Container(
                   alignment: Alignment.centerRight,
                   padding: const EdgeInsets.only(right: 20),
@@ -214,6 +219,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
     if (ok != true) return;
     deleteAllUserData();
+    loggedIn = false;
     reminderTime = null;
     try {
       await scheduleReminders(); // sem horário, só cancela os avisos agendados
