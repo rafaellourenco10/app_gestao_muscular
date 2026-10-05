@@ -77,7 +77,8 @@ class Logo extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(color: surface1, borderRadius: BorderRadius.circular(12), border: Border.all(color: border)),
-            child: const Icon(Icons.bolt, color: lime, size: 22),
+            // monograma de "telas app/icone app"; fonte em assets/icon/logo_mark.svg
+            child: Image.asset('assets/logo_mark.png', width: 22, height: 22, semanticLabel: 'Diário Fit'),
           ),
           const SizedBox(width: 10),
         ],

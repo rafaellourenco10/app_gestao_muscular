@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="1024" height="1024"><defs>
+<radialGradient id="darkBg" cx="50%" cy="25%" r="85%"><stop offset="0%" stop-color="#23242E"/><stop offset="55%" stop-color="#111216"/><stop offset="100%" stop-color="#08080A"/></radialGradient>
+<filter id="neonPulse" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="14" result="glow"/><feMerge><feMergeNode in="glow"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+<filter id="deepShadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="18" stdDeviation="22" flood-color="#000000" flood-opacity="0.75"/></filter>
+<filter id="flareBlur" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="55"/></filter>
+<linearGradient id="limeCore" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#EEFF66"/><stop offset="50%" stop-color="#C6F432"/><stop offset="100%" stop-color="#9DE005"/></linearGradient>
+<linearGradient id="cardGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#22232B"/><stop offset="100%" stop-color="#14151B"/></linearGradient>
+</defs><rect width="512" height="512" fill="url(#darkBg)"/><circle cx="256" cy="245" r="130" fill="#C6F432" opacity="0.14" filter="url(#flareBlur)"/>
+<g filter="url(#deepShadow)">
+<rect x="110" y="105" width="292" height="302" rx="48" fill="url(#cardGrad)" stroke="#313340" stroke-width="3"/>
+<rect x="134" y="138" width="16" height="236" rx="8" fill="#2E303C"/>
+<rect x="134" y="190" width="16" height="70" rx="8" fill="url(#limeCore)"/>
+<path d="M 180 160 H 260 C 315 160, 350 195, 340 248 C 332 290, 292 315, 235 315 H 180" fill="none" stroke="#FFFFFF" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+<g filter="url(#neonPulse)"><path d="M 176 250 L 260 250 L 225 355 L 345 220" fill="none" stroke="url(#limeCore)" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/></g>
+<circle cx="340" cy="148" r="16" fill="url(#limeCore)" filter="url(#neonPulse)"/>
+<path d="M 334 148 L 338 152 L 347 143" fill="none" stroke="#121216" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+</g></svg>

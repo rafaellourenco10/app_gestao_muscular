@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 130" width="540" height="130" fill="none">
+  <defs>
+    <!-- Background Card Gradient matching dark app palette -->
+    <linearGradient id="bgPlate" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#18181D"/>
+      <stop offset="100%" stop-color="#0E0E12"/>
+    </linearGradient>
+
+    <!-- Neon Lime Gradient -->
+    <linearGradient id="limeGradNeon" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E2FF66"/>
+      <stop offset="50%" stop-color="#C6F432"/>
+      <stop offset="100%" stop-color="#9DE005"/>
+    </linearGradient>
+
+    <!-- Glow Filter -->
+    <filter id="neonSubtleGlow2" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3.5" result="glow"/>
+      <feMerge>
+        <feMergeNode in="glow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Solid Dark Background Container so white & lime text pops anywhere -->
+  <rect width="540" height="130" rx="24" fill="url(#bgPlate)" stroke="#262732" stroke-width="2"/>
+
+  <!-- Subtle ambient glow in background -->
+  <circle cx="65" cy="65" r="45" fill="#C6F432" opacity="0.08"/>
+
+  <!-- Dark Card Badge for DF Monogram -->
+  <g transform="translate(25, 25)">
+    <rect width="80" height="80" rx="20" fill="#131317" stroke="#2D2E3A" stroke-width="1.8"/>
+    <!-- Ambient circle inside icon -->
+    <circle cx="40" cy="40" r="24" fill="#C6F432" opacity="0.12"/>
+    
+    <!-- Stylized Monogram D (White) -->
+    <path d="M 28 26 V 54 M 28 26 H 42 C 51 26, 56 31, 56 40 C 56 49, 51 54, 42 54 H 28" 
+          stroke="#FFFFFF" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    
+    <!-- F / Energy strike in neon lime -->
+    <g filter="url(#neonSubtleGlow2)">
+      <path d="M 34 40 H 52 M 40 40 L 46 54 L 60 32" 
+            stroke="url(#limeGradNeon)" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+  </g>
+
+  <!-- Brand Typography: Diário Fit -->
+  <g transform="translate(130, 22)">
+    <!-- Main text: Diário (Pure Crisp White) + Fit (Neon Lime) on Dark Background -->
+    <text x="0" y="50" font-family="'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="42" font-weight="700" letter-spacing="-1">
+      <tspan fill="#FFFFFF">Diário </tspan>
+      <tspan fill="url(#limeGradNeon)" font-weight="800">Fit</tspan>
+    </text>
+    
+    <!-- Subtitle / Tagline -->
+    <text x="3" y="74" font-family="'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11.5" font-weight="600" fill="#9394A5" letter-spacing="3">
+      TRACK • EVOLVE • REPEAT
+    </text>
+  </g>
+</svg>
