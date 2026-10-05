@@ -14,6 +14,9 @@ final _plugin = FlutterLocalNotificationsPlugin();
 // mas o app esquece o horário. Persistir junto com o cronograma no Supabase.
 TimeOfDay? reminderTime;
 
+/// Plugin iniciado. Se o initReminders falhou, as notificações do treino viram no-op.
+bool _ready = false;
+
 bool get remindersSupported =>
     !kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS);
 
@@ -23,11 +26,12 @@ Future<void> initReminders() async {
   tz.setLocalLocation(tz.getLocation((await FlutterTimezone.getLocalTimezone()).identifier));
   await _plugin.initialize(
     settings: const InitializationSettings(
-      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+      android: AndroidInitializationSettings('ic_notification'), // silhueta branca: a barra de status ignora cores
       // a permissão é pedida só quando a pessoa ativa o lembrete
       iOS: DarwinInitializationSettings(requestAlertPermission: false, requestSoundPermission: false, requestBadgePermission: false),
     ),
   );
+  _ready = true;
 }
 
 Future<bool> requestReminderPermission() async {
@@ -115,4 +119,73 @@ Future<void> configureReminder(BuildContext context) async {
   reminderTime = picked;
   await scheduleReminders();
   if (context.mounted) toast('Lembrete às ${picked.format(context)} nos dias com treino.');
+}
+
+// --- Treino em andamento com o app em segundo plano ---
+
+const _progressId = 100, _alertId = 101;
+
+/// Notificação fixa com o cronômetro do treino. Só Android: o próprio sistema anima
+/// a contagem regressiva até [endsAt], mesmo sem o app rodar.
+Future<void> showWorkoutProgress(String title, String body, {DateTime? endsAt}) async {
+  if (!_ready || defaultTargetPlatform != TargetPlatform.android) return;
+  await _plugin.show(
+    id: _progressId,
+    title: title,
+    body: body,
+    notificationDetails: NotificationDetails(
+      android: AndroidNotificationDetails(
+        'treino',
+        'Treino em andamento',
+        channelDescription: 'Cronômetro do treino enquanto o app está em segundo plano',
+        importance: Importance.low,
+        priority: Priority.low,
+        category: AndroidNotificationCategory.workout,
+        ongoing: true,
+        autoCancel: false,
+        silent: true,
+        showWhen: endsAt != null,
+        when: endsAt?.millisecondsSinceEpoch,
+        usesChronometer: endsAt != null,
+        chronometerCountDown: true,
+      ),
+    ),
+  );
+}
+
+/// Aviso com som (fim do descanso, próxima rodada...). Com [at], agenda para aquele
+/// momento: só no iOS, que congela o app em segundo plano. No Android o próprio app
+/// continua contando e chama sem [at] na hora certa.
+Future<void> alertWorkout(String title, String body, {DateTime? at}) async {
+  if (!_ready) return;
+  final ios = defaultTargetPlatform == TargetPlatform.iOS;
+  const details = NotificationDetails(
+    android: AndroidNotificationDetails(
+      'treino_alerta',
+      'Avisos do treino',
+      channelDescription: 'Fim do descanso, próxima rodada e treino completo',
+      importance: Importance.high,
+      priority: Priority.high,
+      category: AndroidNotificationCategory.workout,
+    ),
+    iOS: DarwinNotificationDetails(),
+  );
+  if (at == null) {
+    await _plugin.show(id: _alertId, title: title, body: body, notificationDetails: details);
+  } else if (ios) {
+    await _plugin.zonedSchedule(
+      id: _alertId,
+      scheduledDate: tz.TZDateTime.from(at, tz.local),
+      title: title,
+      body: body,
+      notificationDetails: details,
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle, // ignorado no iOS
+    );
+  }
+}
+
+Future<void> clearWorkoutNotifications() async {
+  if (!_ready) return;
+  await _plugin.cancel(id: _progressId);
+  await _plugin.cancel(id: _alertId);
 }

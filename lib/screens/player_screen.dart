@@ -5,11 +5,16 @@ import 'package:flutter/services.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../data.dart';
+import '../reminders.dart';
 import '../ui.dart';
 import 'exercises_screen.dart' show LevelBadge;
 import 'workout_summary_screen.dart';
 
 enum _Phase { work, rest, done }
+
+/// Relógio do player; os testes trocam para simular o tempo passando em segundo plano.
+@visibleForTesting
+DateTime Function() playerClock = DateTime.now;
 
 class PlayerScreen extends StatefulWidget {
   const PlayerScreen({super.key, required this.title, required this.items, required this.index, this.restSec = 0});
@@ -23,46 +28,79 @@ class PlayerScreen extends StatefulWidget {
 }
 
 class _PlayerScreenState extends State<PlayerScreen> {
+  // Cópia: trocar um exercício vale só para este treino. Os itens são os mesmos do
+  // cronograma, então o "ajustar carga" continua valendo para os próximos treinos.
+  late final _items = [...widget.items];
   late int _i = widget.index;
   int _set = 1;
   _Phase _phase = _Phase.work;
   late int _left = _item.time; // segundos restantes da rodada (funcional) ou do descanso
+  // Fim da fase pelo relógio real: em segundo plano os ticks param ou atrasam,
+  // então o tempo restante é sempre recalculado a partir daqui.
+  DateTime? _endsAt;
   Timer? _timer;
   final _clock = Stopwatch()..start(); // tempo real do treino, para o resumo
   int _setsDone = 0;
+  bool _background = false;
+  bool _askedPermission = false;
+  late final AppLifecycleListener _lifecycle;
 
-  PlanItem get _item => widget.items[_i];
-  bool get _running => _timer != null;
+  PlanItem get _item => _items[_i];
+  bool get _running => _endsAt != null;
 
   @override
   void initState() {
     super.initState();
-    WakelockPlus.enable(); // tela não apaga durante o treino
+    WakelockPlus.enable().catchError((_) {}); // tela não apaga durante o treino
+    _lifecycle = AppLifecycleListener(onHide: _onHide, onShow: _onShow);
   }
 
   @override
   void dispose() {
     _timer?.cancel();
-    WakelockPlus.disable();
+    _lifecycle.dispose();
+    clearWorkoutNotifications();
+    WakelockPlus.disable().catchError((_) {});
     super.dispose();
   }
 
-  void _start() => setState(() => _timer ??= Timer.periodic(const Duration(seconds: 1), (_) => _tick()));
+  /// [from]: quando a fase começou. Na troca automática de fase é o fim da anterior,
+  /// assim o tempo passado em segundo plano não se perde.
+  void _start([DateTime? from]) {
+    if (!_askedPermission) {
+      _askedPermission = true; // para o cronômetro aparecer na notificação
+      requestReminderPermission().catchError((_) => false);
+    }
+    setState(() {
+      _endsAt = (from ?? playerClock()).add(Duration(seconds: _left));
+      _timer ??= Timer.periodic(const Duration(milliseconds: 250), (_) => _tick());
+    });
+  }
 
   void _pause() => setState(() {
         _timer?.cancel();
         _timer = null;
+        _endsAt = null;
       });
 
   void _tick() {
-    setState(() => _left--);
-    if (_phase == _Phase.rest && _left > 0 && _left <= 3) HapticFeedback.selectionClick(); // 3, 2, 1
-    if (_left > 0) return;
-    if (_phase == _Phase.rest) {
-      _alert();
-      _beginWork();
-    } else {
-      _completeSet();
+    // laço: ao voltar do segundo plano pode ter passado mais de uma fase
+    while (_endsAt != null) {
+      final end = _endsAt!;
+      final left = (end.difference(playerClock()).inMilliseconds / 1000).ceil();
+      if (left > 0) {
+        if (left != _left) {
+          setState(() => _left = left);
+          if (_phase == _Phase.rest && left <= 3) HapticFeedback.selectionClick(); // 3, 2, 1
+        }
+        return;
+      }
+      if (_phase == _Phase.rest) {
+        _alert();
+        _beginWork(end);
+      } else {
+        _completeSet(end);
+      }
     }
   }
 
@@ -70,13 +108,14 @@ class _PlayerScreenState extends State<PlayerScreen> {
   void _alert() => HapticFeedback.vibrate();
 
   /// Fim de uma série/rodada: vai para a próxima série, o próximo exercício ou encerra.
-  void _completeSet() {
+  void _completeSet([DateTime? at]) {
     _setsDone++;
     final lastSet = _set >= _item.sets;
-    if (lastSet && _i == widget.items.length - 1) {
+    if (lastSet && _i == _items.length - 1) {
       _pause();
       _alert();
       setState(() => _phase = _Phase.done);
+      _notifyBackground();
       return;
     }
     setState(() {
@@ -92,19 +131,21 @@ class _PlayerScreenState extends State<PlayerScreen> {
         _phase = _Phase.rest;
         _left = widget.restSec;
       });
-      _start();
+      _start(at);
+      _notifyBackground();
     } else {
-      _beginWork();
+      _beginWork(at);
     }
   }
 
   /// Funcional segue contando sozinho; hipertrofia espera o "Série feita".
-  void _beginWork() {
+  void _beginWork([DateTime? at]) {
     setState(() {
       _phase = _Phase.work;
       _left = _item.time;
     });
-    _item.isTime ? _start() : _pause();
+    _item.isTime ? _start(at) : _pause();
+    _notifyBackground();
   }
 
   /// Ajuste na hora: ±5s por rodada (funcional) ou ±1 repetição (hipertrofia).
@@ -115,7 +156,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
           final old = item.time;
           item.time = (old + step * 5).clamp(5, 300);
           // rodada em andamento ganha/perde o mesmo tempo
-          if (_phase == _Phase.work) _left = (_left + item.time - old).clamp(1, item.time);
+          if (_phase == _Phase.work) {
+            _left = (_left + item.time - old).clamp(1, item.time);
+            if (_running) _endsAt = playerClock().add(Duration(seconds: _left));
+          }
         } else {
           item.reps = (item.reps + step).clamp(1, 100);
         }
@@ -131,19 +175,109 @@ class _PlayerScreenState extends State<PlayerScreen> {
     });
   }
 
+  /// Aparelho ocupado: troca por outro da mesma categoria, mantendo séries/tempo/reps.
+  Future<void> _swap() async {
+    final current = _item.exercise;
+    final options = exercises.where((e) => e.categoryId == current.categoryId && e != current).toList();
+    if (options.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Não há outro exercício nesta categoria.')));
+      return;
+    }
+    final picked = await showModalBottomSheet<Exercise>(
+      context: context,
+      backgroundColor: surface1,
+      showDragHandle: true,
+      builder: (sheet) => SafeArea(
+        child: ListView(shrinkWrap: true, padding: const EdgeInsets.fromLTRB(12, 0, 12, 12), children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 0, 8, 4),
+            child: Text('Trocar ${current.title}', style: grotesk(20)),
+          ),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(8, 0, 8, 12),
+            child: Text('Só neste treino. O cronograma não muda.', style: TextStyle(color: textLow, fontSize: 13)),
+          ),
+          for (final e in options)
+            ListTile(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              leading: ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: SizedBox.square(dimension: 48, child: NetImage(e.image)),
+              ),
+              title: Text(e.title, style: grotesk(16, weight: FontWeight.w600)),
+              subtitle: Text('${e.equipment} · ${e.level}', style: const TextStyle(color: textLow, fontSize: 13)),
+              onTap: () => Navigator.pop(sheet, e),
+            ),
+        ]),
+      ),
+    );
+    if (picked == null || !mounted) return;
+    final old = _item;
+    _items[_i] = PlanItem(picked, type: old.type, sets: old.sets, time: old.time, reps: old.reps);
+    _goTo(_i);
+  }
+
+  // --- Segundo plano ---
+
+  void _onHide() {
+    _background = true;
+    if (_phase == _Phase.done || (!_running && _item.isTime)) return; // pausado: nada a avisar
+    final (title, body) = _backgroundText();
+    showWorkoutProgress(title, body, endsAt: _endsAt);
+    if (_endsAt case final end?) {
+      final rest = _phase == _Phase.rest;
+      final label = _item.type.setLabel;
+      alertWorkout(
+        rest ? 'Fim do descanso' : '$label concluída',
+        rest ? 'Bora para a próxima ${label.toLowerCase()}!' : 'Volte ao app para seguir o treino.',
+        at: end,
+      );
+    }
+  }
+
+  void _onShow() {
+    _background = false;
+    clearWorkoutNotifications();
+    _tick(); // recupera o tempo que passou fora
+  }
+
+  /// Troca de fase com o app em segundo plano (o Android segue contando): avisa com
+  /// som e atualiza o cronômetro da notificação.
+  void _notifyBackground() {
+    if (!_background) return;
+    final (title, body) = _backgroundText();
+    if (_phase == _Phase.done) {
+      clearWorkoutNotifications().then((_) => alertWorkout(title, body));
+    } else {
+      alertWorkout(title, body);
+      showWorkoutProgress(title, body, endsAt: _endsAt);
+    }
+  }
+
+  (String, String) _backgroundText() {
+    final item = _item, e = item.exercise;
+    final set = '${item.type.setLabel} $_set de ${item.sets}';
+    return switch (_phase) {
+      _Phase.done => ('Treino completo! 💪', 'Toque para concluir e salvar no histórico.'),
+      _Phase.rest => ('Descanso', 'A seguir: ${e.title} · $set'),
+      _ when item.isTime => (set, e.title),
+      _ => ('$set · ${item.reps} reps', '${e.title} · toque para marcar a série'),
+    };
+  }
+
   void _finish() {
     _clock.stop();
     final minutes = (_clock.elapsed.inSeconds / 60).ceil().clamp(1, 999);
-    history.add(WorkoutLog(DateTime.now(), widget.title, widget.items.length, minutes));
+    history.add(WorkoutLog(DateTime.now(), widget.title, _items.length, minutes));
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
         builder: (_) => WorkoutSummaryScreen(
           title: widget.title,
           duration: _clock.elapsed,
-          exercises: widget.items.length,
+          exercises: _items.length,
           setsDone: _setsDone,
-          type: widget.items.first.type,
+          type: _items.first.type,
         ),
       ),
     );
@@ -154,7 +288,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     final item = _item;
     final e = item.exercise;
     final category = categories.firstWhere((c) => c.id == e.categoryId);
-    final isLast = _i == widget.items.length - 1;
+    final isLast = _i == _items.length - 1;
 
     final (String label, IconData icon, VoidCallback onPressed) = switch (_phase) {
       _Phase.done => ('Concluir treino', Icons.check, _finish),
@@ -176,7 +310,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
             child: Row(children: [
               SquareIconButton(Icons.arrow_back, onTap: () => Navigator.pop(context)),
               const Spacer(),
-              Text('Exercício ${_i + 1} / ${widget.items.length}', style: grotesk(16, color: textLow)),
+              Text('Exercício ${_i + 1} / ${_items.length}', style: grotesk(16, color: textLow)),
             ]),
           ),
           // TODO(videos): trocar a imagem por VideoPlayer (pacote video_player) com e.videoUrl
@@ -202,7 +336,16 @@ class _PlayerScreenState extends State<PlayerScreen> {
               const SizedBox(height: 24),
               Text(category.name.toUpperCase(), style: caps(textLow)),
               const SizedBox(height: 6),
-              Text(e.title, style: grotesk(26, spacing: -0.5)),
+              Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Expanded(child: Text(e.title, style: grotesk(26, spacing: -0.5))),
+                if (_phase != _Phase.done)
+                  TextButton.icon(
+                    onPressed: _swap,
+                    icon: const Icon(Icons.swap_horiz, size: 20),
+                    label: const Text('Trocar'),
+                    style: TextButton.styleFrom(foregroundColor: lime, textStyle: grotesk(15, weight: FontWeight.w600)),
+                  ),
+              ]),
               const SizedBox(height: 12),
               Wrap(spacing: 8, runSpacing: 8, children: [
                 LevelBadge(e.level),
@@ -221,7 +364,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
               ),
               const SizedBox(height: 28),
               Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                Text('Dicas de execução', style: grotesk(22, weight: FontWeight.w600)),
+                Expanded(child: Text('Dicas de execução', style: grotesk(22, weight: FontWeight.w600))),
                 Text('${e.tips.length} FUNDAMENTAIS', style: caps(textLow)),
               ]),
               const SizedBox(height: 12),
