@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../data.dart';
+import '../reminders.dart';
 import '../ui.dart';
+import 'legal_screen.dart';
+import 'welcome_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -178,10 +181,70 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
           ],
+          const SizedBox(height: 32),
+          Text('Conta', style: grotesk(18, weight: FontWeight.w600)),
+          const SizedBox(height: 10),
+          for (final doc in LegalDoc.values)
+            _AccountTile(Icons.description_outlined, doc.title,
+                () => Navigator.push(context, MaterialPageRoute(builder: (_) => LegalScreen(doc)))),
+          _AccountTile(Icons.delete_forever_outlined, 'Excluir conta', _deleteAccount, color: Colors.redAccent),
         ]),
       ),
     );
   }
+
+  Future<void> _deleteAccount() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        backgroundColor: surface1,
+        title: Text('Excluir conta?', style: grotesk(20)),
+        content: const Text(
+          'Seu perfil, cronograma, histórico de treinos e registros de peso serão apagados para sempre. Isso não pode ser desfeito.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialog, false), child: const Text('Cancelar')),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialog, true),
+            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent, foregroundColor: textHigh),
+            child: const Text('Excluir tudo'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    deleteAllUserData();
+    reminderTime = null;
+    try {
+      await scheduleReminders(); // sem horário, só cancela os avisos agendados
+    } catch (e) {
+      debugPrint('Falha ao cancelar lembretes: $e');
+    }
+    if (!mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const WelcomeScreen()), (_) => false);
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Conta excluída.')));
+  }
+}
+
+class _AccountTile extends StatelessWidget {
+  const _AccountTile(this.icon, this.label, this.onTap, {this.color = textHigh});
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: ListTile(
+          tileColor: surface1,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          leading: Icon(icon, color: color),
+          title: Text(label, style: grotesk(16, weight: FontWeight.w600, color: color)),
+          trailing: const Icon(Icons.chevron_right, color: textLow),
+          onTap: onTap,
+        ),
+      );
 }
 
 String _date(DateTime d) => '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';

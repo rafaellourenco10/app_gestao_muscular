@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../data.dart';
 import '../ui.dart';
 import 'categories_screen.dart';
+import 'legal_screen.dart';
 import 'login_screen.dart';
 
 class SignupScreen extends StatefulWidget {
@@ -110,10 +111,11 @@ class _SignupScreenState extends State<SignupScreen> {
                 ),
               ]),
               const Text(
-                'Ao continuar, você concorda com nossos Termos de Uso e nossa Política de Privacidade.',
+                'Ao continuar, você concorda com nossos:',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: textLow, fontSize: 13),
               ),
+              const LegalLinks(),
             ]),
           ),
         ),

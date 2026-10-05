@@ -106,4 +106,20 @@ void main() {
     expect(parseDecimal('abc'), isNull);
     weights.clear();
   });
+
+  test('excluir conta apaga todos os dados', () {
+    applyReadyPlan(readyPlans.first);
+    dayRest[0] = 90;
+    history.add(WorkoutLog(DateTime.now(), 'Treino', 3, 20));
+    addWeight(80);
+    profile.name = 'Ana';
+
+    deleteAllUserData();
+
+    expect(weeklyPlan.every((d) => d.isEmpty), isTrue);
+    expect(dayRest[0], 60);
+    expect(history, isEmpty);
+    expect(weights, isEmpty);
+    expect(profile.name, '');
+  });
 }

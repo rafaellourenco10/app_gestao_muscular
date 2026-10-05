@@ -219,7 +219,7 @@ class Profile {
   double? goalKg;
 }
 
-final profile = Profile();
+var profile = Profile();
 
 class WeightEntry {
   const WeightEntry(this.date, this.kg);
@@ -263,3 +263,16 @@ String kg(double v) => v.toStringAsFixed(v % 1 == 0 ? 0 : 1).replaceAll('.', ','
 
 /// Aceita "72,5" ou "72.5"; null se não for número.
 double? parseDecimal(String s) => double.tryParse(s.trim().replaceAll(',', '.'));
+
+/// Excluir conta: apaga tudo que o app guarda sobre a pessoa.
+// TODO(supabase): chamar uma Edge Function que apaga o usuário do auth e as linhas dele (cascade).
+void deleteAllUserData() {
+  for (var d = 0; d < 7; d++) {
+    weeklyPlan[d] = [];
+    dayType[d] = WorkoutType.funcional;
+    dayRest[d] = 60;
+  }
+  history.clear();
+  weights.clear();
+  profile = Profile();
+}
