@@ -82,7 +82,7 @@ class Logo extends StatelessWidget {
           const SizedBox(width: 10),
         ],
         Text.rich(TextSpan(style: grotesk(22), children: const [
-          TextSpan(text: 'Func'),
+          TextSpan(text: 'Diário '),
           TextSpan(text: 'Fit', style: TextStyle(color: lime)),
         ])),
       ]);

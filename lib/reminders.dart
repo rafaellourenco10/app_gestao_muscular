@@ -109,7 +109,7 @@ Future<void> configureReminder(BuildContext context) async {
   );
   if (picked == null || !context.mounted) return;
   if (!await requestReminderPermission()) {
-    if (context.mounted) toast('Permita as notificações do FuncFit nas configurações do celular.');
+    if (context.mounted) toast('Permita as notificações do Diário Fit nas configurações do celular.');
     return;
   }
   reminderTime = picked;

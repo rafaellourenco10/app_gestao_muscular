@@ -1,4 +1,4 @@
-package com.funcfit.funcfit
+package com.diariofit.app
 
 import io.flutter.embedding.android.FlutterActivity
 

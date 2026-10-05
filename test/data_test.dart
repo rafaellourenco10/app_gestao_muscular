@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:funcfit/data.dart';
+import 'package:diario_fit/data.dart';
 
 void main() {
   final e = exercises.first; // 45s

@@ -1,6 +1,6 @@
 {
-    "name": "funcfit",
-    "short_name": "funcfit",
+    "name": "Diário Fit",
+    "short_name": "Diário Fit",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

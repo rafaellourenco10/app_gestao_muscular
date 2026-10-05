@@ -17,15 +17,15 @@ Future<void> main() async {
   } catch (e) {
     debugPrint('Lembretes indisponíveis: $e'); // o app abre mesmo sem notificações
   }
-  runApp(const FuncFitApp());
+  runApp(const DiarioFitApp());
 }
 
-class FuncFitApp extends StatelessWidget {
-  const FuncFitApp({super.key});
+class DiarioFitApp extends StatelessWidget {
+  const DiarioFitApp({super.key});
 
   @override
   Widget build(BuildContext context) => MaterialApp(
-        title: 'FuncFit',
+        title: 'Diário Fit',
         debugShowCheckedModeBanner: false,
         theme: buildTheme(),
         // textos do sistema (seletor de horário, botões de diálogo) em português

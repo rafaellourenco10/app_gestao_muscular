@@ -4,7 +4,7 @@
     <!-- lembrete diário: reagendar após reiniciar o aparelho -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <application
-        android:label="funcfit"
+        android:label="Diário Fit"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />

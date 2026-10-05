@@ -62,7 +62,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 keyboardType: TextInputType.emailAddress,
                 style: const TextStyle(color: textHigh),
                 validator: validateEmail,
-                decoration: const InputDecoration(hintText: 'seu.email@funcfit.com', prefixIcon: Icon(Icons.mail_outline)),
+                decoration: const InputDecoration(hintText: 'seu.email@exemplo.com', prefixIcon: Icon(Icons.mail_outline)),
               ),
               const FieldLabel('Senha'),
               PasswordField(controller: _password, hint: 'Digite sua senha'),

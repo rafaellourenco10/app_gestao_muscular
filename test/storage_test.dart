@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:funcfit/data.dart';
-import 'package:funcfit/reminders.dart';
-import 'package:funcfit/storage.dart';
+import 'package:diario_fit/data.dart';
+import 'package:diario_fit/reminders.dart';
+import 'package:diario_fit/storage.dart';
 
 void main() {
   test('salvar e carregar devolve os mesmos dados', () {

@@ -9,7 +9,7 @@ import 'reminders.dart';
 // Tudo num único JSON no aparelho. Os dados são pequenos (semana + histórico + pesos),
 // então regravar o pacote inteiro é mais simples do que salvar campo a campo.
 // ponytail: só local; com o Supabase isto vira cache offline das tabelas.
-const _key = 'funcfit_data';
+const _key = 'diariofit_data';
 final _prefs = SharedPreferencesAsync();
 
 /// Há uma sessão aberta (pula a tela de boas-vindas).

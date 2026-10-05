@@ -1,4 +1,4 @@
-# funcfit
+# Diário Fit
 
 A new Flutter project.
 
